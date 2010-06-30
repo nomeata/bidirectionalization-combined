@@ -1,0 +1,7 @@
+initHalf(Nil)       = Nil
+initHalf(Cons(a,x)) = Cons(a,initHalfWork(x,x))
+
+initHalfWork(xs, Nil)         = Nil
+initHalfWork(xs, Cons(x,Nil)) = Nil
+initHalfWork(Cons(a,x), Cons(b,Cons(c,y)))
+    = Cons(a,initHalfWork(x,y))
