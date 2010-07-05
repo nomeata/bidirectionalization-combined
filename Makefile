@@ -1,4 +1,4 @@
-TARGET = combined_b18n
+TARGET = b18n-combined
 
 all : $(TARGET)
 
