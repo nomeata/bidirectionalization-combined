@@ -1,4 +1,4 @@
-TARGET = Main
+TARGET = combined_b18n
 
 all : $(TARGET)
 
