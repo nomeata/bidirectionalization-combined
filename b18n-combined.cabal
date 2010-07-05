@@ -10,9 +10,12 @@ Author:              Kazutaka Matsuda
 Maintainer:          kztk@kb.ecei.tohoku.ac.jp
 Category:            Language
 Build-type:          Simple
-Cabal-version:       >=1.2
+Cabal-version:       >=1.6
+Extra-source-files:  example/*.txt
+Data-files:          BUtil.hs
 
 
 Executable b18n-combined
   Main-is: Main.hs            
   Build-depends: base (>=4), mtl, template-haskell, containers, pretty, parsec
+  Other-modules: Util, AST, Parser, Type, Shapify, CodeGen
