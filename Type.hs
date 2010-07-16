@@ -13,6 +13,26 @@ import Data.List (nub,nubBy,union)
 import Data.Map (Map)
 import qualified Data.Map as Map
 
+-- type erasure
+eraseType (AST decls) =
+    AST $ map (\(Decl f ftype ps e) ->
+             Decl f FTUndet (map eraseTypeP ps) (eraseTypeE e)) decls 
+
+eraseTypeP (PVar id t varname)   
+    = PVar id TUndet varname
+eraseTypeP (PCon id t conname ps)
+    = PCon id TUndet conname (map eraseTypeP ps)
+
+eraseTypeE (EVar id t varname) 
+    = EVar id TUndet varname 
+eraseTypeE (ECon id t conname es)
+    = ECon id TUndet conname (map eraseTypeE es)
+eraseTypeE (EFun id t funname es)
+    = EFun id TUndet funname (map eraseTypeE es)
+
+eraseTypeT (TAST decls) = 
+    TAST $ map (\(TDecl f ps es bs) -> 
+                    TDecl f (map eraseTypeP ps) (map eraseTypeE es)bs) decls
 
 -- type inference
 

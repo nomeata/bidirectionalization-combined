@@ -6,7 +6,7 @@ import Text.PrettyPrint
 import Control.Monad.State
 import Control.Monad.Error
 import Data.List
-import Data.Maybe (fromJust, isNothing)
+import Data.Maybe (fromJust, isNothing, isJust)
 import Debug.Trace 
 
 import Data.Function (on)
@@ -29,50 +29,158 @@ import CodeGen
 
 import System.IO
 import System.Environment
+import System.IO.Unsafe
 
 data Config 
     = Config 
       { 
         inputFile   :: Maybe String, -- ^ Path to input file
         execMode    :: ExecMode,
-        outputMode  :: OutputMode
+        outputMode  :: OutputMode, 
+        isShowType  :: Bool
       }
 
 data ExecMode 
     = Normal | Shapify | ShapifyPlus | Help | Debug 
 
-data OutputMode = PseudoCode | HaskellCode 
+data OutputMode = PseudoCode | HaskellCode | ForwardCode
 
 defaultConfig = Config { 
                   inputFile   = Nothing, 
                   execMode    = Normal, 
-                  outputMode  = PseudoCode }
+                  outputMode  = PseudoCode,
+                  isShowType  = True  }
 
+data OptionAction 
+    = NullaryAction (Config -> Config)
+    | UnaryAction   (String -> Config -> Config)
+
+interpretAction (NullaryAction f) xs c 
+    = Just (xs, f c)
+interpretAction (UnaryAction f) [] c 
+    = Nothing
+interpretAction (UnaryAction f) (x:xs) c 
+    = Just (xs, f x c) 
+
+      
+data Option 
+    = Option { optionString :: String, 
+               optionLongString :: Maybe String,
+               optionArgDescription :: Doc, 
+               optionDescription :: Doc, 
+               optionAction :: OptionAction }
+
+instance Ppr Option where
+    ppr (Option s ls argdesc desc _) =
+        ppr s <> (case ls of 
+                    Just ls -> comma <+> ppr ls
+                    Nothing -> empty)
+              <+> argdesc  $$
+              nest 4 desc
+    pprList opts =
+        vcat $ (punctuate (text "\n") $ map ppr opts)
+        
+
+options = 
+    [ Option "-f" (Just "--file") (text "FILENAME")
+             (text "Specify program's input file")
+             (UnaryAction (\x conf -> 
+                               conf { inputFile = Just x })),
+      Option "-s" (Just "--shapify") (empty)
+             (text "Convert terms with type \"T a\" to \"T Unit\".")
+             (NullaryAction (\conf -> conf {execMode = Shapify})),
+      Option "-n" (Just "--natify") empty
+             (text "Convert terms with \"List a\" to \"Nat\".")
+             (NullaryAction (\conf -> conf {execMode = ShapifyPlus})),
+      Option "-h"  (Just "--help") empty
+             (text "Show this help message.")
+             (NullaryAction (\conf -> conf {execMode = Help})),
+      Option "-H"  (Just "--haskell-code") empty
+             (text "Return a Haskell source code of \"put\" function."
+              $$ text "This options implies \"-n\".")
+             (NullaryAction (\conf -> conf {outputMode = HaskellCode, execMode = ShapifyPlus})),
+      Option "-P"  (Just "--pseudo-code") empty
+             (text "Return a pseudo code only after syntatic bidirectionalizatoin."
+              $$ text "Note that \"wrapping\" code for semantic bidirectionalization is not produced.")
+             (NullaryAction (\conf -> conf {outputMode = PseudoCode })),
+      Option "-F"  (Just "--forward-only") empty
+             (text"Return a pseudo code without bidirecionalization.")
+             (NullaryAction (\conf -> conf {outputMode = ForwardCode })), 
+      Option "-U"  (Just "--without-type") empty 
+             (text"Pseudo code without type. This option affects the output of \"-P\" and \"-F\".")
+             (NullaryAction (\conf -> conf {isShowType = False})),
+      Option "-T"  (Just "--with-type") empty 
+             (text"Pseudo code with type. This option affects the output of \"-P\" and \"-F\".")
+             (NullaryAction (\conf -> conf {isShowType = True}))
+--       Option "-d" (Just "--debug-exec") empty
+--              (text"Debug Execution (Do not use this option).")
+--              (NullaryAction $ \conf -> conf {execMode = Debug})
+    ]
+
+      
+matchOption optString options 
+    = foldr f Nothing options 
+    where f o r = 
+              if (optionString o == optString) 
+                 || (isJust (optionLongString o) 
+                     && (fromJust (optionLongString o) == optString)) then 
+                  Just o 
+              else
+                  r
+           
 parseArgs :: [[Char]] -> Config -> Config 
 parseArgs args conf =
     case args of 
-      ("-f":x:xs) ->
-          parseArgs xs (conf { inputFile = Just x })
-      ("-s":xs) ->
-          parseArgs xs (conf { execMode = Shapify })
-      ("-ss":xs) ->
-          parseArgs xs (conf { execMode = ShapifyPlus })
-      ("-h":xs) ->
-          parseArgs xs (conf { execMode = Help })
-      ("-H":xs) ->
-          parseArgs xs (conf { outputMode = HaskellCode, execMode = ShapifyPlus } )
-      ("-P":xs) ->
-          parseArgs xs (conf { outputMode = PseudoCode } )
-      ("-d":xs) ->
+      ("-d":xs) -> 
           parseArgs xs (conf { execMode = Debug })
-      (x:xs) | isNothing (inputFile conf) ->
-          parseArgs xs (conf { inputFile = Just x })
-      (x:xs) ->
-          parseArgs xs conf
-      [] ->
-          conf
+      ("--debug":xs) -> 
+          parseArgs xs (conf { execMode = Debug })
+      (x:xs) -> case matchOption x options of 
+                  Just o -> 
+                      case  interpretAction (optionAction o) xs conf of 
+                        Just (rest, c) -> 
+                            parseArgs rest c 
+                        Nothing ->
+                            error "Error: #Argument of option mismatch." 
+                  Nothing -> 
+                      case x of 
+                        '-':_ -> 
+                            error $ "Error: Unknown option " ++ show x 
+                        _ -> 
+                            if isNothing (inputFile conf) then 
+                                parseArgs xs (conf { inputFile = Just x })
+                            else 
+                                parseArgs xs conf
+      []     -> conf
 
-progName = "Main"
+
+
+-- parseArgs :: [[Char]] -> Config -> Config 
+-- parseArgs args conf =
+--     case args of 
+--       ("-f":x:xs) ->
+--           parseArgs xs (conf { inputFile = Just x })
+--       ("-s":xs) ->
+--           parseArgs xs (conf { execMode = Shapify })
+--       ("-ss":xs) ->
+--           parseArgs xs (conf { execMode = ShapifyPlus })
+--       ("-h":xs) ->
+--           parseArgs xs (conf { execMode = Help })
+--       ("-H":xs) ->
+--           parseArgs xs (conf { outputMode = HaskellCode, execMode = ShapifyPlus } )
+--       ("-P":xs) ->
+--           parseArgs xs (conf { outputMode = PseudoCode } )
+--       ("-d":xs) ->
+--           parseArgs xs (conf { execMode = Debug })
+--       (x:xs) | isNothing (inputFile conf) ->
+--           parseArgs xs (conf { inputFile = Just x })
+--       (x:xs) ->
+--           parseArgs xs conf
+--       [] ->
+--           conf
+
+
+progName = unsafePerformIO getProgName
 
 usage = show $ 
     text "USAGE" $$
@@ -87,25 +195,11 @@ usage = show $
          wrap 80 ( "Given a \"get\" function defined in a file specified by FILENAME,"
                   ++ "the program returns \"put\" function by combining "
                   ++ "semantic bidirectionalization (Janis Voiglander: POPL'09) "
-                  ++ "and syntatic bidirectionalization (Kazutaka Matsuda et al.: ICFP'07). A typical usage is \""++ progName ++ " -ss -H FILENAME\", which corresponding to the paper.\n"
+                  ++ "and syntatic bidirectionalization (Kazutaka Matsuda et al.: ICFP'07). A typical usage is \""++ progName ++ " -ss -H FILENAME\", which correspondes to the paper.\n"
                   ) $+$
     text "OPTIONS" $$
     text "-------" $$
-         pprOptions ([ 
-               (text "-ss", text"Converts \"List Unit\"s to \"Nat\"s"), 
-               (text"-H", text"Returns a Haskell source code of \"put\" function." $$ text "This options implies \"-ss\"."),
-               (text"-P", text"Returns a pseudo code only after syntatic bidirectionalization [DEFAULT]"),                                                       
-               (text"-h", text"Show this help message") ])                      
---          vcat [nest 4 (text "-t"),
---                nest 8 (text "Type inference only"),
---                nest 4 (text "-s"),
---                nest 8 (vcat [text"Replace all expressions/patterns \"e :: t\"",
---                              text"in function with type \"forall ...t... . ...\"."]) ,
---                nest 4 (text "-ss"),
---                nest 8 (vcat [text "Replace all expressions/patterns \"[] :: List Unit\" with \"Z :: Nat\"",
---                              text "and \"Cons(_,x) :: List Unit\" with \"S(x)::Nat\"."]),
---                nest 4 (text "-h"),
---                nest 8 (text "Show this help messange.")]
+         ppr options
     where
       pprOptions ps = vcat $ concatMap 
                       (\(a,b) -> [nest 4 a,nest 8 b]) ps 
@@ -141,12 +235,12 @@ main = do { args <- getArgs
                          Right cprog -> 
                              case execMode conf of 
                                Normal -> 
-                                   outputCode (outputMode conf) False (cprog) (typeInference cprog)
+                                   outputCode conf False (cprog) (typeInference cprog)
                                Shapify ->
-                               -- outputCode (outputMode conf) False (cprog) (shapify $ typeInference cprog)
-                                   putStrLn "Not Supported Now."
+                                   outputCode conf False (cprog) (shapify $ typeInference cprog)
+                                   -- putStrLn "Not Supported Now."
                                ShapifyPlus ->
-                                   outputCode (outputMode conf) True  (cprog) (introNat $ shapify $ typeInference cprog)
+                                   outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
                                Debug ->
                                    do { print $ ppr   $ cprog
                                       -- ; print $ pprAM $ constructAutomaton (typeInference cprog) initTAMap
@@ -166,12 +260,14 @@ main = do { args <- getArgs
                      }
           }
 
-outputCode o isShapify orig ast =
+outputCode conf isShapify orig ast =
     let (p1,p2,p3) = constructBwdFunction ast
-    in case o of 
+    in case outputMode conf of 
+         ForwardCode -> 
+             do print $ ppr (typeFilter ast)
          PseudoCode  ->
              do print $ ppr (constructTypeDecl p2)
-                print $ ppr orig $$  ppr p1 $$ ppr p2 $$ ppr p3 
+                print $ ppr orig $$  ppr (typeFilter p1) $$ ppr (typeFilter p2) $$ ppr (typeFilterT p3)
          HaskellCode ->
              do putStrLn $ "import Control.Monad"
                 putStrLn $ "import BUtil"
@@ -183,6 +279,8 @@ outputCode o isShapify orig ast =
                 print $ ppr (constructTypeDecl p2)
                 print $ ppr $ generateCodeBwd (orig,p1,p2,p3)
     where
+      typeFilter  = if isShowType conf then id else eraseType
+      typeFilterT = if isShowType conf then id else eraseTypeT
       genBwdDef (Name fName,(TFun is ts t)) =
           case (ts,t) of 
             ([TCon (Name "List") [TVar i]],TCon (Name "List") [TVar j]) | i == j  ->

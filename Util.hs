@@ -8,6 +8,7 @@ class Ppr a where
     pprList :: [a] -> Doc 
     pprList as = brackets (sep $ punctuate comma (map ppr as))
 
+
 instance (Ppr Int) where 
     ppr i = int i 
 
@@ -26,6 +27,7 @@ instance Ppr a => Ppr [a] where
 
 instance Ppr Char where
     ppr c     = char c
+    pprList s = text s
 
 instance (Ppr a, Ppr b) => Ppr (Either a b) where
     ppr (Left a)  = text "Left"  <+> ppr a 
