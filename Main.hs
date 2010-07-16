@@ -185,7 +185,7 @@ progName = unsafePerformIO getProgName
 usage = show $ 
     text "USAGE" $$
     text "-----" $$
-         nest 4 (text $ progName ++ "[-ss] (-P|-H) [-f] [FILENAME]\n") $+$ 
+         nest 4 (text $ progName ++ " (-n|-s) (-T|-U) (-P|-H|-F) [-f] [FILENAME]\n") $+$ 
                   
          text ("This program is a prototype implementation of the paper:\n") $$
          nest 4 (sep [text "Janis Voigtlander, Zhenjiang Hu, Kazutaka Matsuda and Meng Wang:",
@@ -195,7 +195,7 @@ usage = show $
          wrap 80 ( "Given a \"get\" function defined in a file specified by FILENAME,"
                   ++ "the program returns \"put\" function by combining "
                   ++ "semantic bidirectionalization (Janis Voiglander: POPL'09) "
-                  ++ "and syntatic bidirectionalization (Kazutaka Matsuda et al.: ICFP'07). A typical usage is \""++ progName ++ " -ss -H FILENAME\", which correspondes to the paper.\n"
+                  ++ "and syntatic bidirectionalization (Kazutaka Matsuda et al.: ICFP'07). A typical usage is \""++ progName ++ " -H FILENAME\", which correspondes to the paper.\n"
                   ) $+$
     text "OPTIONS" $$
     text "-------" $$
