@@ -49,25 +49,29 @@ defaultConfig = Config {
                   isShowType  = True  }
 
 
-outputCode :: Config -> Bool -> AST -> AST -> IO ()
+outputCode :: Config -> Bool -> AST -> AST -> Doc
 outputCode conf isShapify orig ast =
     let (p1,p2,p3) = constructBwdFunction ast
     in case outputMode conf of 
-         ForwardCode -> 
-             do print $ ppr (typeFilter ast)
-         PseudoCode  ->
-             do print $ ppr (constructTypeDecl p2)
-                print $ ppr orig $$  ppr (typeFilter p1) $$ ppr (typeFilter p2) $$ ppr (typeFilterT p3)
-         HaskellCode ->
-             do putStrLn $ "import Control.Monad"
-                putStrLn $ "import BUtil"
-                when isShapify $
-                     print $ vcat $ map genBwdDef 
-                               (let AST decls = typeInference orig
-                                in map (\(Decl f t _ _:_) -> (f,t)) $ 
-                                     groupBy isSameFunc decls)
-                print $ ppr (constructTypeDecl p2)
-                print $ ppr $ generateCodeBwd (orig,p1,p2,p3)
+         ForwardCode ->
+                  ppr (typeFilter ast)
+         PseudoCode  -> vcat
+                [ ppr (constructTypeDecl p2)
+                , ppr orig $$  ppr (typeFilter p1) $$ ppr (typeFilter p2) $$ ppr (typeFilterT p3)
+                ]
+         HaskellCode -> vcat $
+                [ text "import Control.Monad"
+                , text "import BUtil"
+                ] ++ (
+                if isShapify
+                then map genBwdDef $
+                        let AST decls = typeInference orig
+                        in map (\(Decl f t _ _:_) -> (f,t)) $ groupBy isSameFunc decls
+                else []                                     
+                ) ++
+                [ ppr (constructTypeDecl p2)
+                , ppr $ generateCodeBwd (orig,p1,p2,p3)
+                ]
     where
       typeFilter  = if isShowType conf then id else eraseType
       typeFilterT = if isShowType conf then id else eraseTypeT

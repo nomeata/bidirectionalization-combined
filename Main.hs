@@ -216,12 +216,12 @@ main = do { args <- getArgs
                          Left err -> hPutStrLn stderr (show err)
                          Right cprog -> 
                              case execMode conf of 
-                               Normal -> 
+                               Normal -> print $
                                    outputCode conf False (cprog) (typeInference cprog)
-                               Shapify ->
+                               Shapify -> print $
                                    outputCode conf False (cprog) (shapify $ typeInference cprog)
                                    -- putStrLn "Not Supported Now."
-                               ShapifyPlus ->
+                               ShapifyPlus -> print $
                                    outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
                                Debug ->
                                    do { print $ ppr   $ cprog
