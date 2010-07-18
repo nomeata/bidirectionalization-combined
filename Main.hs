@@ -260,6 +260,7 @@ main = do { args <- getArgs
                      }
           }
 
+outputCode :: Config -> Bool -> AST -> AST -> IO ()
 outputCode conf isShapify orig ast =
     let (p1,p2,p3) = constructBwdFunction ast
     in case outputMode conf of 
@@ -326,6 +327,7 @@ data Deriv s    = DCon Name [s]
                 | DEps s 
                 | DAny
 
+pprAM :: (Ppr a, Ppr t) => Map t [Deriv a] -> Doc
 pprAM am = 
     vcat $ map pprDs $ Map.toList am
     where
@@ -349,6 +351,7 @@ instance Ppr AState where
 instance Show AState where
     show = show . ppr 
 
+initTAMap :: Type -> State Int (AState, Map AState [Deriv AState])
 initTAMap s = constructTypeMap s
     where
       uniq = do { i <- get; put (i+1); return i }
@@ -396,11 +399,12 @@ testOverlap (AST decl) =
                     ; return $ vcat ( map g vs )}
           where g bs = hcat ( map (\h -> if h then text "O" else text "-") bs)
           
+isNonErasing :: Decl -> Bool
 isNonErasing (Decl _ _ ps e) =
     null $ (snub $ concatMap varsP ps) \\ varsE e
 
 
-
+checkInjectivity :: Automaton AState -> AST -> Name -> State (CAConf AState) Bool
 checkInjectivity am (AST decl) f =
     checkInj (Set.empty) f 
     where
@@ -425,6 +429,7 @@ checkInjectivity am (AST decl) f =
                         else
                             return False } }
 
+testTupling :: AST -> TAST
 testTupling ast = 
     evalState (do { cAst <- optimizedComplementation am ast
                   ; tAst <- doTupling am ast cAst
@@ -537,6 +542,7 @@ localInversionD (TDecl f ps es vdecls) =
       linvVD (VDecl vs f us) = VDecl us (NInv f) vs 
       
 -- doTupling :: AST -> AST -> TAST 
+doTupling :: Automaton AState -> AST -> AST -> State (CAConf AState) TAST
 doTupling am (AST decls) (AST cdecls) =
     do { tdecls <- mapM tupleD $ zip decls cdecls 
        ; return $ TAST tdecls }
