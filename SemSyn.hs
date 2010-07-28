@@ -39,8 +39,10 @@ data Config
 
 data ExecMode 
     = Normal | Shapify | ShapifyPlus | Help | Debug 
+    deriving (Eq, Read, Show)
 
 data OutputMode = PseudoCode | HaskellCode | ForwardCode
+    deriving (Eq, Read, Show)
 
 defaultConfig = Config { 
                   inputFile   = Nothing, 
