@@ -99,7 +99,7 @@ examples =
 		])
 	]
 
-defaultCode = fromJust (lookup "halve" examples)
+defaultCode = fromJust (lookup "init" examples)
 	
 outputErrors :: String -> Html
 outputErrors s = 
