@@ -15,13 +15,14 @@ import Shapify
 
 import JQuery
 
-page code pageContent =
+page code scrollX scrollY pageContent =
        header << (
 	thetitle << "Combining Syntatic and Semantic Bidirectionalization" +++
 	style ! [ thetype "text/css" ] << cdata cssStyle +++
-	script ! [ thetype "text/javascript", src "?jquery" ] << noHtml
+	script ! [ thetype "text/javascript", src "?jquery" ] << noHtml +++
+        script ! [ thetype "text/javascript" ] << cdata jsCode 
        ) +++
-       body << (
+       body ! [ strAttr "onload" "restoreScroll()" ] << (
 	thediv ! [theclass "top"] << (
 		thespan ! [theclass "title"] << "Combining Syntatic and Semantic Bidirectionalization" +++
 		thespan ! [theclass "subtitle"] << "Prototype implementation"
@@ -38,7 +39,12 @@ page code pageContent =
 		)
 			
 	) +++
-        form ! [method "POST", action "#"] << (
+        form ! [method "POST",
+                action "#",
+                strAttr "onsubmit" "saveScroll()"
+            ] << (
+                hidden "scrollx" scrollX  +++
+                hidden "scrolly" scrollY +++
 		maindiv << (
 			 p << (
 				"Please enter the view function. (TODO: Elaborate this text)"
@@ -171,7 +177,7 @@ jQueryMain = do
     
 
 formMain = do
-        setHeader "Content-type" "text/xml; charset=UTF-8"
+        setHeader "Content-type" "application/xhtml+xml; charset=UTF-8"
 
         exMode  <- maybe Normal read <$> getInput "execMode"
         outMode <- maybe PseudoCode read <$> getInput "outputMode"
@@ -198,8 +204,10 @@ formMain = do
                    Shapify -> outputCode conf False ast (shapify $ typeInference ast)
                    ShapifyPlus -> outputCode conf True  ast (introNat $ shapify $ typeInference ast)
 
+        scrollX <- fromMaybe "0" <$> getInput "scrollx"
+        scrollY <- fromMaybe "0" <$> getInput "scrolly"
 
-        outputFPS $ fromString $ showHtml $ page code $
+        outputFPS $ fromString $ showHtml $ page code scrollX scrollY $
 		{- p << astInfo mbAST +++ -}
 		maindiv ! [ identifier "output" ]<< (
 			p << (
@@ -278,3 +286,11 @@ cssStyle = unlines
         , "p { text-align:justify; }"
 	]
 
+jsCode = unlines 
+    [ "function saveScroll () {"
+    , "    $(\"#scrolly\").val($(\"html\").scrollTop());"
+    , "}"
+    , "function restoreScroll () {"
+    , "    $(\"html\").scrollTop($(\"#scrolly\").val());"
+    , "}"
+    ]
