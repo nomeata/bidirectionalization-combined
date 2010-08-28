@@ -1,5 +1,8 @@
+{-# LANGUAGE OverloadedStrings #-}
 module JQuery where
 
-jQueryCode :: String
+import Data.ByteString.Lazy.Char8
+
+jQueryCode :: ByteString
 jQueryCode = %blob "jquery.min.js"
 

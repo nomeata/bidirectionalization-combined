@@ -6,7 +6,8 @@ import sys
 
 class MyRequestHandler(CGIHTTPRequestHandler):
 	def is_cgi(self):
-		self.cgi_info = ("","")
+                path = self.path
+                self.cgi_info = ("/",self.path[1:])
 		return True
 
 	def translate_path(self, path):

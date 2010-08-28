@@ -6,6 +6,7 @@ import Data.ByteString.Lazy.UTF8 (fromString)
 import Control.Monad
 import Control.Applicative ((<$>),(<*>))
 import Text.PrettyPrint.HughesPJ (render)
+import System.IO
 
 import Parser
 import SemSyn
@@ -18,7 +19,7 @@ page code pageContent =
        header << (
 	thetitle << "Combining Syntatic and Semantic Bidirectionalization" +++
 	style ! [ thetype "text/css" ] << cdata cssStyle +++
-	script ! [ thetype "text/javascript" ] << cdata jQueryCode
+	script ! [ thetype "text/javascript", src "?jquery" ] << noHtml
        ) +++
        body << (
 	thediv ! [theclass "top"] << (
@@ -155,9 +156,21 @@ defines "" _   = False
 defines _  ""  = False
 defines (i:is) (x:xs) | i == x = defines is xs
                       | i /= x = False
-		   
 
 cgiMain = do
+    qs <- queryString
+    if qs == "jquery"
+     then jQueryMain
+     else formMain
+
+jQueryMain = do
+        setHeader "Content-type" "text/javascript"
+        setHeader "Expires" "Fri, 01 Jan 2100 00:00:00 +0100"
+        setHeader "Cache-control" "max-age=36000000" -- 1000 h
+        outputFPS $ jQueryCode
+    
+
+formMain = do
         setHeader "Content-type" "text/xml; charset=UTF-8"
 
         exMode  <- maybe Normal read <$> getInput "execMode"
