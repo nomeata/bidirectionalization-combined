@@ -224,7 +224,9 @@ assignTypeVars tmpMap typeMap (Decl fname ftype ps e) =
                      do { es' <- mapM assignTypeVarsE es 
                         ; unifyFT t' (TFun [] (map typeofE es') (TVar i))
                         ; unifyT  t  (TVar i)
-                        ; return $ ECon id (TVar i) c es' }}
+                        ; return $ ECon id (TVar i) c es' }
+                 Nothing -> fail $ "No type " ++ show c ++ " in type map"
+             }
       assignTypeVarsE (EFun id t f es) =
           do { i <- newTypeVar
              ; case lookup f (typeMap ++ tmpMap)  of
