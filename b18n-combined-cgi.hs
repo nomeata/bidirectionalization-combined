@@ -12,10 +12,13 @@ import SemSyn
 import Type
 import Shapify
 
+import JQuery
+
 page code pageContent =
        header << (
 	thetitle << "Combining Syntatic and Semantic Bidirectionalization" +++
-	style ! [ thetype "text/css" ] << cdata cssStyle
+	style ! [ thetype "text/css" ] << cdata cssStyle +++
+	script ! [ thetype "text/javascript" ] << cdata jQueryCode
        ) +++
        body << (
 	thediv ! [theclass "top"] << (

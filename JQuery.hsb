@@ -1,0 +1,5 @@
+module JQuery where
+
+jQueryCode :: String
+jQueryCode = %blob "jquery.min.js"
+
