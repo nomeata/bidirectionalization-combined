@@ -109,9 +109,11 @@ page (PageInfo {..}) =
                             p << ("Result:"+++ br +++
                                 textarea ! [name "gencode", cols "120"
                                            , rows (show (1 + length (lines generatedModule)))
+                                           , readOnly
                                            ] << generatedModule
 
                             )
+
                         )
 		)
 	) +++
@@ -322,3 +324,5 @@ jsCode = unlines
 
 htmlMB Nothing  f = noHtml
 htmlMB (Just x) f = f x
+
+readOnly = emptyAttr "readonly"
