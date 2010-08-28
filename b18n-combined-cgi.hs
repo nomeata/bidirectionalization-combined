@@ -115,7 +115,25 @@ page (PageInfo {..}) =
                             )
 
                         )
-		)
+		) +++
+                maindiv ! [ identifier "playwithit" ] << ( htmlMB generatedModuleMB $ \_ ->
+                    table << (
+                        tr << (td << "Source:"         +++
+                               td << input ! [name "source", value "[?]"] +++
+                               td << submit "updView" "Run \"get source\""
+                            ) +++ 
+                        tr << (td << "View:"           +++
+                               td << input ! [readOnly, value "[?]"]
+                            ) +++ 
+                        tr << (td << "Updated view:"   +++
+                               td << input ! [name "view", value "[?]"] +++
+                               td << submit "updView" "Run \"put source view\""
+                            ) +++ 
+                        tr << (td << "Updated source:" +++
+                               td << input ! [readOnly, value "[?]"]
+                            )
+                    )
+                )
 	) +++
         maindiv << (
 		p << (
