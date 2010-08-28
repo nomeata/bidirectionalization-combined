@@ -8,11 +8,14 @@ import Control.Monad
 import Control.Applicative ((<$>),(<*>))
 import Text.PrettyPrint.HughesPJ (render)
 import System.IO
+import Text.ParserCombinators.Parsec (ParseError)
+
 
 import Parser
 import SemSyn
 import Type
 import Shapify
+import AST
 
 import JQuery
 
@@ -20,6 +23,7 @@ data PageInfo = PageInfo
     { scrollX :: Maybe String
     , scrollY :: Maybe String
     , viewFunction :: String
+    , parseError :: Maybe String
     , exMode  :: ExecMode
     , outMode :: OutputMode
     , showTypes :: Bool
@@ -73,7 +77,13 @@ page (PageInfo {..}) =
 			) 
 			
 		) +++
-		{- p << astInfo mbAST +++ -}
+                ( htmlMB parseError $ \err -> 
+                     maindiv << p << (
+                        "Can not parse your definition:" +++ br +++
+                        pre << show err +++ br +++
+                        mkSubmit True Check)
+                ) +++
+		-- p << astInfo mbAST +++
 		maindiv ! [ identifier "output" ]<< (
 			p << (
 				"You can calculate a derived put function with various options:" ) +++
@@ -238,6 +248,8 @@ formMain = do
         let mbAST = parseString code
 
         let conf = defaultConfig { outputMode = outMode, execMode = exMode, isShowType = showTypes }
+        let parseError = either (Just . show) (const Nothing) mbAST
+
         let genCode = case (todo,mbAST) of
                 (Just Load, _) -> Nothing
                 (Just _, Right ast) -> Just $ render $ case exMode of 
@@ -249,7 +261,7 @@ formMain = do
         scrollX <- getInput "scrollx"
         scrollY <- getInput "scrolly"
 
-        outputFPS $ fromString $ showHtml $ page (PageInfo scrollX scrollY code exMode outMode showTypes genCode)
+        outputFPS $ fromString $ showHtml $ page (PageInfo scrollX scrollY code parseError exMode outMode showTypes genCode)
 
 astInfo (Left err) = maindiv << p << (
 	"Can not parse your definition:" +++ br +++
