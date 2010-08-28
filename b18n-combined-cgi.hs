@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 import Network.CGI
 import Text.XHtml
 import Data.Maybe
@@ -15,7 +16,17 @@ import Shapify
 
 import JQuery
 
-page code scrollX scrollY pageContent =
+data PageInfo = PageInfo
+    { scrollX :: Maybe String
+    , scrollY :: Maybe String
+    , viewFunction :: String
+    , exMode  :: ExecMode
+    , outMode :: OutputMode
+    , showTypes :: Bool
+    , generatedModuleMB :: Maybe String
+    } 
+
+page (PageInfo {..}) =
        header << (
 	thetitle << "Combining Syntatic and Semantic Bidirectionalization" +++
 	style ! [ thetype "text/css" ] << cdata cssStyle +++
@@ -43,8 +54,8 @@ page code scrollX scrollY pageContent =
                 action "#",
                 strAttr "onsubmit" "saveScroll()"
             ] << (
-                hidden "scrollx" scrollX  +++
-                hidden "scrolly" scrollY +++
+                hidden "scrollx" (fromMaybe "0" scrollX) +++
+                hidden "scrolly" (fromMaybe "0" scrollY) +++
 		maindiv << (
 			 p << (
 				"Please enter the view function. (TODO: Elaborate this text)"
@@ -53,16 +64,46 @@ page code scrollX scrollY pageContent =
 			p << (
 				concatHtml (map (\(name,thisCode) -> 
 					radio "load" name
-					! (if thisCode == code then [checked] else [])
+					! (if thisCode == viewFunction then [checked] else [])
 					+++ name +++ " "
 				) examples) +++
 				mkSubmit True Load +++
 				br +++
-				textarea ! [name "code", cols "120", rows "7"] << code
+				textarea ! [name "code", cols "120", rows "7"] << viewFunction
 			) 
 			
 		) +++
- 		pageContent
+		{- p << astInfo mbAST +++ -}
+		maindiv ! [ identifier "output" ]<< (
+			p << (
+				"You can calculate a derived put function with various options:" ) +++
+			p << ( "Execution mode: " +++
+			       concatHtml (map (\mode -> 
+			          radio "execMode" (show mode) 
+					! (guard (mode == exMode) >> return checked)
+					+++ show mode +++ " "
+                                ) [Normal, Shapify, ShapifyPlus]) +++ br +++
+			       "Output mode: " +++
+			       concatHtml (map (\mode -> 
+			          radio "outputMode" (show mode) 
+					! (guard (mode == outMode) >> return checked)
+					+++ show mode +++ " "
+                                ) [PseudoCode, HaskellCode, ForwardCode]) +++ br +++
+			       "Show types " +++ checkbox "showTypes" "showTypes"
+                                        ! (guard showTypes >> return checked)
+                                        +++ br +++
+			       mkSubmit True BiDi
+			) +++
+                        ( htmlMB generatedModuleMB $ \ generatedModule -> 
+                            {- maybe noHtml outputErrors errors +++ -}
+                            p << ("Result:"+++ br +++
+                                textarea ! [name "gencode", cols "120"
+                                           , rows (show (1 + length (lines generatedModule)))
+                                           ] << generatedModule
+
+                            )
+                        )
+		)
 	) +++
         maindiv << (
 		p << (
@@ -183,61 +224,33 @@ formMain = do
         outMode <- maybe PseudoCode read <$> getInput "outputMode"
         showTypes <- isJust <$> getInput "showTypes"
 	
-	todo <- fromMaybe Check . msum <$> sequence (
+	todo <- msum <$> sequence (
             map (\what -> fmap (const what) <$> getInput (submitId what))
             [ BiDi, Get, Check, Load ])
         
 	code <- fromMaybe defaultCode <$> getInput "code"
 	
+        code <- case todo of
+            Just Load -> do loadWhat <- getInput "load"
+                            return $ fromMaybe code $ loadWhat >>= flip lookup examples 
+            _ -> return code
+        
         let mbAST = parseString code
 
-        code <- case todo of
-            Load -> do loadWhat <- getInput "load"
-                       return $ fromMaybe code $ loadWhat >>= flip lookup examples 
-            _ -> return code
-
         let conf = defaultConfig { outputMode = outMode, execMode = exMode, isShowType = showTypes }
-        let genCode = case mbAST of
-              Left _ -> ""
-              Right ast -> render $ case exMode of 
-                   Normal -> outputCode conf False ast (typeInference ast)
-                   Shapify -> outputCode conf False ast (shapify $ typeInference ast)
-                   ShapifyPlus -> outputCode conf True  ast (introNat $ shapify $ typeInference ast)
+        let genCode = case (todo,mbAST) of
+                (Just Load, _) -> Nothing
+                (Just _, Right ast) -> Just $ render $ case exMode of 
+                       Normal -> outputCode conf False ast (typeInference ast)
+                       Shapify -> outputCode conf False ast (shapify $ typeInference ast)
+                       ShapifyPlus -> outputCode conf True  ast (introNat $ shapify $ typeInference ast)
+                _ -> Nothing
 
-        scrollX <- fromMaybe "0" <$> getInput "scrollx"
-        scrollY <- fromMaybe "0" <$> getInput "scrolly"
+        scrollX <- getInput "scrollx"
+        scrollY <- getInput "scrolly"
 
-        outputFPS $ fromString $ showHtml $ page code scrollX scrollY $
-		{- p << astInfo mbAST +++ -}
-		maindiv ! [ identifier "output" ]<< (
-			p << (
-				"You can calculate a derived put function with various options:" ) +++
-			p << ( "Execution mode: " +++
-			       concatHtml (map (\mode -> 
-			          radio "execMode" (show mode) 
-					! (if mode == exMode then [checked] else [])
-					+++ show mode +++ " "
-                                ) [Normal, Shapify, ShapifyPlus]) +++ br +++
-			       "Output mode: " +++
-			       concatHtml (map (\mode -> 
-			          radio "outputMode" (show mode) 
-					! (if mode == outMode then [checked] else [])
-					+++ show mode +++ " "
-                                ) [PseudoCode, HaskellCode, ForwardCode]) +++ br +++
-			       "Show types " +++ checkbox "showTypes" "showTypes"
-                                        ! (if showTypes then [checked] else [])
-                                        +++ br +++
-			       mkSubmit True BiDi
-			) +++
-			{- maybe noHtml outputErrors errors +++ -}
-                        p << ("Result:"+++ br +++
-			    textarea ! [name "gencode", cols "120"
-                                       , rows (show (1 + length (lines genCode)))
-                                       ] << genCode
+        outputFPS $ fromString $ showHtml $ page (PageInfo scrollX scrollY code exMode outMode showTypes genCode)
 
-                        )
-		)
-		
 astInfo (Left err) = maindiv << p << (
 	"Can not parse your definition:" +++ br +++
 	pre << show err +++ br +++
@@ -294,3 +307,6 @@ jsCode = unlines
     , "    $(\"html\").scrollTop($(\"#scrolly\").val());"
     , "}"
     ]
+
+htmlMB Nothing  f = noHtml
+htmlMB (Just x) f = f x
