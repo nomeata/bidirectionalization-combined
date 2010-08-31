@@ -56,7 +56,7 @@ timeoutIO action = bracket
 		return ret
 	)
 
--- myInterpreter :: String -> IO String
+myInterpreter :: (String -> InterpreterT IO [a]) -> String -> IO [a]
 myInterpreter todo exp = timeoutIO $ do
         when (unsafe exp) $ throwDyn (MyException "Indicators for unsafe computations found in exp")
 
@@ -80,6 +80,7 @@ myInterpreter todo exp = timeoutIO $ do
 		Left exception -> throw exception
 		Right result -> return result
         
+formatInterpreterError :: InterpreterError -> [Char]
 formatInterpreterError (UnknownError s) = "Unknown Interpreter Error " ++ s
 formatInterpreterError (WontCompile es) = "Could not compile code:\n" ++ unlines (map errMsg es)
 formatInterpreterError (NotAllowed s) = "Not allowed here " ++ s
