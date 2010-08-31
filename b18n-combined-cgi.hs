@@ -17,6 +17,7 @@ import Type
 import Shapify
 import AST
 
+import MyInterpret
 import JQuery
 
 data PageInfo = PageInfo

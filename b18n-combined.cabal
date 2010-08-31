@@ -23,5 +23,6 @@ Executable b18n-combined
 Executable b18n-combined-cgi
   Main-is: b18n-combined-cgi.hs
   Build-depends: base (>=4), mtl, template-haskell, containers, pretty, parsec,
-                 xhtml, cgi, utf8-string, bytestring
+                 xhtml, cgi, utf8-string, bytestring,
+                 unix, hint >= 0.3.2
   Other-modules: Util, AST, Parser, Type, Shapify, CodeGen

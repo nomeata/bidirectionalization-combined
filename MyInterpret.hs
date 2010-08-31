@@ -12,7 +12,7 @@ import Language.Haskell.Interpreter.GHC.Unsafe
 
 import Prelude hiding (catch)
 import Control.Concurrent
-import Control.Exception
+import Control.OldException
 import Control.Monad
 import Control.Monad.Error
 import System.Posix.Signals
@@ -22,14 +22,8 @@ import Data.Either
 
 
 -- Scoped modules
-modules = [    "Data.Bff",
-	       "SimpleTree",
-               "Prelude",
+modules = [    "Prelude",
                "Data.List"
---               "ShowQ",
---               "ShowFun",
---               "SimpleReflect",
---               "Data.Function",
         ]
 
 data MyException = MyException String deriving (Typeable)
