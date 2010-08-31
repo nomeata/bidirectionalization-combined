@@ -28,6 +28,7 @@ data PageInfo = PageInfo
     , outMode :: OutputMode
     , showTypes :: Bool
     , generatedModuleMB :: Maybe String
+    , playCodeMB :: Maybe String
     } 
 
 page (PageInfo {..}) =
@@ -116,24 +117,17 @@ page (PageInfo {..}) =
 
                         )
 		) +++
-                maindiv ! [ identifier "playwithit" ] << ( htmlMB generatedModuleMB $ \_ ->
-                    table << (
-                        tr << (td << "Source:"         +++
-                               td << input ! [name "source", value "[?]"] +++
-                               td << submit "updView" "Run \"get source\""
-                            ) +++ 
-                        tr << (td << "View:"           +++
-                               td << input ! [readOnly, value "[?]"]
-                            ) +++ 
-                        tr << (td << "Updated view:"   +++
-                               td << input ! [name "view", value "[?]"] +++
-                               td << submit "updView" "Run \"put source view\""
-                            ) +++ 
-                        tr << (td << "Updated source:" +++
-                               td << input ! [readOnly, value "[?]"]
-                            )
+                ( htmlMB playCodeMB $ \playCode -> maindiv << ( 
+                    p << (  "You can now play with the code. You can modify the " +++
+                            tt << "source" +++ " and calculate the view, or modify the " +++
+                            tt << "view" +++ " and calculate an updated souce." +++ br +++
+                            textarea ! [name "playCode", cols "120", rows "8" ] << playCode
+                    ) +++
+                    p << ( "Evaluate " +++
+                           mkSubmit True EvalGet +++ " " +++
+                           mkSubmit True EvalPut
                     )
-                )
+                ))
 	) +++
         maindiv << (
 		p << (
@@ -153,14 +147,16 @@ maindiv = thediv ! [theclass "main"]
         
 examples =
 	[ ("init", unlines
-		[ "init (Nil)         = Nil"
+		[ "get (a) = init (a)"
+                , "init (Nil)         = Nil"
 		, "init (Cons(a,Nil)) = Nil"
 		, "init (Cons(a,Cons(b,x))) = Cons(a,initWork(b,x))"
 		, "initWork(a,Nil)       = Nil"
 		, "initWork(a,Cons(b,x)) = Cons(a,initWork(b,x))"
 		])
 	, ("initHalf", unlines
-		[ "initHalf(Nil)       = Nil"
+		[ "get (a) = initHalf (a)"
+		, "initHalf(Nil)       = Nil"
 		, "initHalf(Cons(a,x)) = Cons(a,initHalfWork(x,x))"
 		, ""
 		, "initHalfWork(xs, Nil)         = Nil"
@@ -169,12 +165,14 @@ examples =
 		, "                    = Cons(a,initHalfWork(x,y))"
 		])
 	, ("seive", unlines
-		[ "seive (Nil)               = Nil"
+		[ "get (a) = seive (a)"
+		, "seive (Nil)               = Nil"
 		, "seive (Cons(a,Nil))       = Nil"
 		, "seive (Cons(a,Cons(b,x))) = Cons(b,seive(x))"
 		])
 	, ("rev", unlines
-		[ "reverse(xs) = rev(xs,Nil)"
+		[ "get (a) = reverse (a)"
+		, "reverse(xs) = rev(xs,Nil)"
 		, "rev(Nil,y)       = y"
 		, "rev(Cons(a,x),y) = rev(x,Cons(a,y))"
 		])
@@ -192,22 +190,25 @@ outputErrors s =
 mkSubmit active what = submit (submitId what) (submitLabel what)
      	               ! if active then [] else [disabled]
 
-data Run = Get | Check | Load | BiDi
+data Run = Get | Check | Load | BiDi | EvalPut | EvalGet
 
 
 submitId Get = "get source"
 submitId Check = "check"
 submitId Load = "load"
 submitId BiDi = "submitBiDi"
+submitId EvalPut = "evalPut"
+submitId EvalGet = "evalGet"
 
 submitCode Get   = Just ("get source")
 submitCode Check = Nothing
 submitCode Load  = Nothing
-submitCode BiDi = Just ("bidirectionalize")
 
-submitLabel Check = "Re-Parse definition"
-submitLabel Load  = "Load example"
-submitLabel x   = fromJust (submitCode x)
+submitLabel Check =   "Re-Parse definition"
+submitLabel Load  =   "Load example"
+submitLabel EvalGet = "view = get source"
+submitLabel EvalPut = "result = put source view"
+submitLabel BiDi =    "bidirectionalize"
 
 main = runCGI (handleErrors cgiMain)
 
@@ -251,12 +252,12 @@ formMain = do
         setHeader "Content-type" "application/xhtml+xml; charset=UTF-8"
 
         exMode  <- maybe Normal read <$> getInput "execMode"
-        outMode <- maybe PseudoCode read <$> getInput "outputMode"
+        outMode <- maybe HaskellCode read <$> getInput "outputMode"
         showTypes <- isJust <$> getInput "showTypes"
 	
 	todo <- msum <$> sequence (
             map (\what -> fmap (const what) <$> getInput (submitId what))
-            [ BiDi, Get, Check, Load ])
+            [ BiDi, Get, Check, Load, EvalPut, EvalGet])
         
 	code <- fromMaybe defaultCode <$> getInput "code"
 	
@@ -278,10 +279,30 @@ formMain = do
                        ShapifyPlus -> outputCode conf True  ast (introNat $ shapify $ typeInference ast)
                 _ -> Nothing
 
+        let defaultPlayCode = Just $ "default code"
+
+        playCode <- case (todo,genCode) of
+            -- The user successfully generated code to play with, insert default playCode.
+            -- Do not use the user input, as he probably switched to a new example.
+            (Just BiDi, Just _) -> return defaultPlayCode
+            -- The user played with the code
+            (Just EvalGet, Just _) -> (`mplus` defaultPlayCode) <$> getInput "playCode"
+            (Just EvalPut, Just _) -> (`mplus` defaultPlayCode) <$> getInput "playCode"
+            (_, _ ) -> return Nothing
+
         scrollX <- getInput "scrollx"
         scrollY <- getInput "scrolly"
 
-        outputFPS $ fromString $ showHtml $ page (PageInfo scrollX scrollY code parseError exMode outMode showTypes genCode)
+        outputFPS $ fromString $ showHtml $ page $
+            PageInfo scrollX
+                     scrollY
+                     code
+                     parseError
+                     exMode
+                     outMode
+                     showTypes
+                     genCode
+                     playCode
 
 astInfo (Left err) = maindiv << p << (
 	"Can not parse your definition:" +++ br +++
