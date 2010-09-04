@@ -117,10 +117,7 @@ page (PageInfo {..}) =
                         ( htmlMB generatedModuleMB $ \ generatedModule -> 
                             {- maybe noHtml outputErrors errors +++ -}
                             p << ("Result:"+++ br +++
-                                textarea ! [name "gencode", cols "120"
-                                           , rows (show (1 + length (lines generatedModule)))
-                                           , readOnly
-                                           ] << generatedModule
+                                pre << generatedModule
 
                             )
 
