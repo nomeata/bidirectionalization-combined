@@ -15,6 +15,7 @@ import System.Directory
 import Prelude hiding ( catch )
 import Control.Exception
 import System.Posix.Files ( isDirectory, getSymbolicLinkStatus )
+import System.Posix.Env
 
 
 import Parser
@@ -408,14 +409,20 @@ firstDeclaredName (AST []) = Nothing
 firstDeclaredName (AST (Decl n _ _ _:_)) = Just (show n)
 
 {-
- - Temp-Dir functions taken from XMonad/Lock.hs and simplified
+ - Temp-Dir functions taken from XMonad/Lock.hs and simplified.
+ - It also changes TMP so that hint’s temporary files are stored within this directory
  -}
 withinTmpDir :: IO a -> IO a
 withinTmpDir job = do
   absolute_name <- (++ "/sem_syn.cgi") <$> getTemporaryDirectory
   formerdir <- getCurrentDirectory
-  bracket (create_directory absolute_name 0)
+  formerTMP <- getEnv "TMPDIR"
+  bracket (do dir <- create_directory absolute_name 0
+              setEnv "TMPDIR" dir True  
+              return dir
+          )
           (\dir -> do setCurrentDirectory formerdir
+                      maybe (unsetEnv "TMPDIR") (\p -> setEnv "TMPDIR" p True) formerTMP
                       rmRecursive dir)
           (const job)
     where newname name 0 = name
