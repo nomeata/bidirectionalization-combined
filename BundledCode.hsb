@@ -1,0 +1,8 @@
+{-# LANGUAGE OverloadedStrings #-}
+module BundledCode where
+
+import Data.ByteString.Lazy.Char8
+
+bUtilCode :: ByteString
+bUtilCode = %blob "BUtil.hs"
+
