@@ -258,8 +258,13 @@ jQueryMain = do
         setHeader "Cache-control" "max-age=36000000" -- 1000 h
         outputFPS $ jQueryCode
     
-defaultPlayCode = -- Are we only considering [Nat] here?
-        Just "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+defaultPlayCode get = -- Are we only considering [Nat] here?
+        Just $ unlines
+            [ "get = " ++ get
+            , "put = " ++ get ++ "_B" 
+            , ""
+            , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+            ]
 
 formMain = do
         setHeader "Content-type" "application/xhtml+xml; charset=UTF-8"
@@ -299,27 +304,27 @@ formMain = do
         (playCode, playErrorM) <- case (todo,getM,genCodeM,pcM) of
             -- The user successfully generated code to play with, insert default playCode.
             -- Do not use the user input, as he probably switched to a new example.
-            (Just BiDi, _, Just _, _) -> return (defaultPlayCode, Nothing)
+            (Just BiDi, Just get, Just _, _) -> return (defaultPlayCode get, Nothing)
             -- The user played with the code
             (Just EvalGet, Just get, Just genCode, Just pc) -> do
-                view <- liftIO $ evaluateWith genCode pc (get ++ " source")
+                view <- liftIO $ evaluateWith genCode pc ("get source")
                 case view of 
                     Left err -> return $ (Just pc, Just err)
                     Right dat -> return $ (\r -> (Just r, Nothing))
                                         $ addDefiniton "view" dat 
                                         $ delDefinition "result"
                                         $ pc
-            (Just EvalGet, _, Just genCode, Nothing) -> do
-                return (defaultPlayCode, Nothing)
+            (Just EvalGet, Just get, Just genCode, Nothing) -> do
+                return (defaultPlayCode get, Nothing)
             (Just EvalPut, Just get, Just genCode, Just pc) -> do
-                view <- liftIO $ evaluateWith genCode pc (get ++ "_B source view")
+                view <- liftIO $ evaluateWith genCode pc ("put source view")
                 case view of 
                     Left err -> return $ (Just pc, Just err)
                     Right dat -> return $ (\r -> (Just r, Nothing))
                                         $ addDefiniton "result" dat 
                                         $ pc
-            (Just EvalPut, _, Just _, Nothing) -> do
-                return (defaultPlayCode, Nothing)
+            (Just EvalPut, Just get, Just _, Nothing) -> do
+                return (defaultPlayCode get, Nothing)
             _ -> return (Nothing, Nothing)
 
         scrollX <- getInput "scrollx"
