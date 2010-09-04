@@ -22,7 +22,7 @@ import Data.Either
 
 
 -- Scoped modules
-modules = [    "Prelude",
+defaultModules = [    "Prelude",
                "Data.List"
         ]
 
@@ -62,20 +62,31 @@ myInterpreter mods imports todo exp = timeoutIO $ do
         when (unsafe exp) $ throw (MyException "Indicators for unsafe computations found in exp")
 
 	eResult <- runInterpreter $ do
-                setUseLanguageExtensions False
+                set [languageExtensions := []]
 		-- Not available in hint-3.2?
                 -- setOptimizations All
 
                 reset
-                -- no need for temporary files I hope
-                setInstalledModsAreInScopeQualified True 
+
+                if null mods
+                  then do -- no need for temporary files I hope. Used by bff
+                       set [installedModulesInScope := True ]
+                       setImports defaultModules
+                  else do -- Only these modules in scope. No Prelude either!
+                       loadModules mods
+                       set [installedModulesInScope := False ]
+                       setImports imports
 	
 		unsafeSetGhcOption "-fno-monomorphism-restriction"
-                
-                setImports modules
+                unsafeSetGhcOption "-fno-warn-warnings-deprecations"
                 
 		liftIO $ putStrLn exp
-                todo exp
+                ret <- todo exp
+
+                -- Hopefully removes temporary files
+                reset
+                
+                return ret
 	
 	case eResult of
 		Left exception -> throw exception
@@ -110,16 +121,16 @@ catchInterpreterErrors action =
         flip catch (\(ErrorCall s) -> return (Left s))   $
         Right `fmap` action
 
-simpleInterpret :: String -> String -> IO String 
-simpleInterpret defs what = 
-	myInterpreter eval $
+simpleInterpret :: [String] -> [String] -> String -> String -> IO String 
+simpleInterpret mods imports defs what = 
+	myInterpreter mods imports eval $
 	   "let \n" ++
 	    unlines (map (replicate 12 ' '++) (lines defs)) ++ 
             replicate 8 ' ' ++ "in " ++ what
 
-simpleTypeOf :: String -> String -> IO String 
-simpleTypeOf defs what = 
-	myInterpreter typeOf $
+simpleTypeOf :: [String] -> [String] -> String -> String -> IO String 
+simpleTypeOf mods imports defs what = 
+	myInterpreter mods imports typeOf $
 	   "let \n" ++
 	    unlines (map (replicate 12 ' '++) (lines defs)) ++ 
             replicate 8 ' ' ++ "in " ++ what
