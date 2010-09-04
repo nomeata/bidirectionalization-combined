@@ -8,7 +8,12 @@ import Control.Monad
 import Control.Applicative ((<$>),(<*>))
 import Text.PrettyPrint.HughesPJ (render)
 import System.IO
+import System.IO.Error hiding ( catch )
 import Text.ParserCombinators.Parsec (ParseError)
+import System.Directory
+import Prelude hiding ( catch )
+import Control.Exception
+import System.Posix.Files ( isDirectory, getSymbolicLinkStatus )
 
 
 import Parser
@@ -366,3 +371,47 @@ htmlMB Nothing  f = noHtml
 htmlMB (Just x) f = f x
 
 readOnly = emptyAttr "readonly"
+{-
+ - Temp-Dir functions taken from XMonad/Lock.hs and simplified
+ -}
+withinTmpDir :: IO a -> IO a
+withinTmpDir job = do
+  absolute_name <- (++ "/sem_syn.cgi") <$> getTemporaryDirectory
+  formerdir <- getCurrentDirectory
+  bracket (create_directory absolute_name 0)
+          (\dir -> do setCurrentDirectory formerdir
+                      rmRecursive dir)
+          (const job)
+    where newname name 0 = name
+          newname name n = name ++ "-" ++ show n
+          create_directory :: FilePath -> Int -> IO FilePath
+          create_directory name n
+              = do createDirectory $ newname name n
+                   setCurrentDirectory $ newname name n
+                   getCurrentDirectory
+                `catch` (\e -> if isAlreadyExistsError e
+                               then create_directory name (n+1)
+                               else throwIO e)
+
+rmRecursive :: FilePath -> IO ()
+rmRecursive d =
+    do isd <- isDirectory <$> getSymbolicLinkStatus d
+       if not isd
+          then removeFile d
+          else when isd $ do conts <- actual_dir_contents
+                             withCurrentDirectory d $
+                               mapM_ rmRecursive conts
+                             removeDirectory d
+    where actual_dir_contents = -- doesn't include . or ..
+              do c <- getDirectoryContents d
+                 return $ filter (/=".") $ filter (/="..") c
+
+withCurrentDirectory :: FilePath -> IO r -> IO r
+withCurrentDirectory name m =
+    bracket
+        (do cwd <- getCurrentDirectory
+            when (name /= "") (setCurrentDirectory name)
+            return cwd)
+        (\oldwd -> setCurrentDirectory oldwd)
+        (const m)
+
