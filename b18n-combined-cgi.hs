@@ -301,7 +301,9 @@ formMain = do
                 _ -> (Nothing, Nothing)
 
         pcM <- getInput "playCode" 
-        (playCode, playErrorM) <- case (todo,getM,genCodeM,pcM) of
+        -- Playcode can only by used when the output is exMode
+        (playCode, playErrorM) <- if outMode /= HaskellCode then return (Nothing, Nothing) else
+            case (todo,getM,genCodeM,pcM) of
             -- The user successfully generated code to play with, insert default playCode.
             -- Do not use the user input, as he probably switched to a new example.
             (Just BiDi, Just get, Just _, _) -> return (defaultPlayCode get, Nothing)
