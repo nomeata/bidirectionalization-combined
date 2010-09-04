@@ -8,11 +8,11 @@ module MyInterpret
          where 
 
 import Language.Haskell.Interpreter
-import Language.Haskell.Interpreter.GHC.Unsafe
+import Language.Haskell.Interpreter.Unsafe
 
 import Prelude hiding (catch)
 import Control.Concurrent
-import Control.OldException
+import Control.Exception
 import Control.Monad
 import Control.Monad.Error
 import System.Posix.Signals
@@ -26,15 +26,16 @@ modules = [    "Prelude",
                "Data.List"
         ]
 
-data MyException = MyException String deriving (Typeable)
+data MyException = MyException String deriving (Show,Typeable)
+instance Exception MyException
 
 timeoutIO action = bracket
 	(do mainId <- myThreadId
-	    installHandler sigXCPU (CatchOnce $ throwDynTo mainId $ MyException "Time limit exceeded.") Nothing
+	    installHandler sigXCPU (CatchOnce $ throwTo mainId $ MyException "Time limit exceeded.") Nothing
 	    forkIO $ do
 		    threadDelay (5 * 1000 * 1000)
 		    -- Time's up. It's a good day to die.
-		    throwDynTo mainId (MyException "Time limit exceeded")
+		    throwTo mainId (MyException "Time limit exceeded")
 
 		    {- why do we need that here?
  - 		    yield -- give the other thread a chance
@@ -50,15 +51,15 @@ timeoutIO action = bracket
 	        mainId <- myThreadId
         	mvar <- newEmptyMVar
 		forkIO $ (action >>= putMVar mvar) `catch`
-			 (throwTo mainId)      
+			 (\e -> throwTo mainId (e::SomeException))
 		ret <- takeMVar mvar
 		evaluate (length ret) -- make sure exceptions are handled here
 		return ret
 	)
 
-myInterpreter :: (String -> InterpreterT IO [a]) -> String -> IO [a]
-myInterpreter todo exp = timeoutIO $ do
-        when (unsafe exp) $ throwDyn (MyException "Indicators for unsafe computations found in exp")
+myInterpreter :: [String] -> [String] -> (String -> InterpreterT IO [a]) -> String -> IO [a]
+myInterpreter mods imports todo exp = timeoutIO $ do
+        when (unsafe exp) $ throw (MyException "Indicators for unsafe computations found in exp")
 
 	eResult <- runInterpreter $ do
                 setUseLanguageExtensions False
@@ -81,7 +82,7 @@ myInterpreter todo exp = timeoutIO $ do
 		Right result -> return result
         
 formatInterpreterError :: InterpreterError -> [Char]
-formatInterpreterError (UnknownError s) = "Unknown Interpreter Error " ++ s
+formatInterpreterError (UnknownError s) = "Unknown Interpreter Error:\n" ++ s
 formatInterpreterError (WontCompile es) = "Could not compile code:\n" ++ unlines (map errMsg es)
 formatInterpreterError (NotAllowed s) = "Not allowed here " ++ s
 formatInterpreterError (GhcException e) = "GHC Exception"
@@ -104,9 +105,9 @@ unsafeNames = ["unsafe", "inlinePerform", "liftIO", "Coerce", "Foreign",
 
 catchInterpreterErrors :: IO a -> IO (Either String a)
 catchInterpreterErrors action = 
-        flip catchDyn (return . Left . formatInterpreterError) $
-        flip catchDyn (\(MyException s) -> return (Left s))   $
-	handleJust errorCalls (return . Left)                  $ -- bff in Bff.hs uses these
+        flip catch (return . Left . formatInterpreterError) $
+        flip catch (\(MyException s) -> return (Left s))   $
+        flip catch (\(ErrorCall s) -> return (Left s))   $
         Right `fmap` action
 
 simpleInterpret :: String -> String -> IO String 
