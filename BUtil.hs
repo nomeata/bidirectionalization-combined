@@ -8,7 +8,18 @@ import System.IO.Unsafe
 
 import Control.Exception
 
-data Nat = S Nat | Z deriving (Show,Eq)
+data Nat = S Nat | Z deriving (Eq)
+
+instance Show Nat where
+  show = show . fromNat
+
+instance Num Nat where
+  (+) = error "No operators defined for Nat"
+  (*) = error "No operators defined for Nat"
+  abs = error "No operators defined for Nat"
+  signum = error "No operators defined for Nat"
+  fromInteger n | n < 0  = error "Nat cannot be negative"
+                | n >= 0 = toNat n
 
 toNat x = if x == 0 then 
               Z
