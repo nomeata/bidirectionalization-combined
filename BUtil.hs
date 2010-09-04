@@ -1,4 +1,4 @@
-{-# OPTIONS -XRank2Types -XCPP #-}
+{-# OPTIONS -XRank2Types -XCPP -XScopedTypeVariables #-}
 module BUtil where
 
 import qualified Data.IntMap as IntMap 
@@ -6,11 +6,7 @@ import Control.Monad
 
 import System.IO.Unsafe
 
-#if __GLASGOW_HASKELL__ >= 610 
-import Control.OldException
-#else
 import Control.Exception
-#endif
 
 data Nat = S Nat | Z deriving (Show,Eq)
 
@@ -59,7 +55,11 @@ castError :: a -> Maybe a
 castError f = unsafePerformIO $ 
     do { r <- try (evaluate f)
        ; case r of
+#if __GLASGOW_HASKELL__ >= 610 
+           Left (e::SomeException) -> return $ Nothing 
+#else
            Left  e -> return $ Nothing 
+#endif
            Right r -> return $ Just $ r }
 
 type Bias = Int -> [ Int ]
