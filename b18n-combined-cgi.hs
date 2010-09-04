@@ -4,6 +4,7 @@ import Text.XHtml
 import Data.Maybe
 import Data.List
 import Data.ByteString.Lazy.UTF8 (fromString)
+import qualified Data.ByteString.Lazy as BS
 import Control.Monad
 import Control.Applicative ((<$>),(<*>))
 import Text.PrettyPrint.HughesPJ (render)
@@ -23,6 +24,7 @@ import Shapify
 import AST
 
 import MyInterpret
+import BundledCode
 import JQuery
 
 data PageInfo = PageInfo
@@ -35,6 +37,7 @@ data PageInfo = PageInfo
     , showTypes :: Bool
     , generatedModuleMB :: Maybe String
     , playCodeMB :: Maybe String
+    , playErrorM :: Maybe String
     } 
 
 page (PageInfo {..}) =
@@ -133,6 +136,12 @@ page (PageInfo {..}) =
                            mkSubmit True EvalGet +++ " " +++
                            mkSubmit True EvalPut
                     )
+                )) +++
+                ( htmlMB playErrorM $ \playError -> maindiv << ( 
+                    p << (
+                        strong << "An error occurred while evaluating your code:" +++ br +++
+                        pre << playError
+                        )
                 ))
 	) +++
         maindiv << (
@@ -153,16 +162,14 @@ maindiv = thediv ! [theclass "main"]
         
 examples =
 	[ ("init", unlines
-		[ "get (a) = init (a)"
-                , "init (Nil)         = Nil"
+		[ "init (Nil)         = Nil"
 		, "init (Cons(a,Nil)) = Nil"
 		, "init (Cons(a,Cons(b,x))) = Cons(a,initWork(b,x))"
 		, "initWork(a,Nil)       = Nil"
 		, "initWork(a,Cons(b,x)) = Cons(a,initWork(b,x))"
 		])
 	, ("initHalf", unlines
-		[ "get (a) = initHalf (a)"
-		, "initHalf(Nil)       = Nil"
+		[ "initHalf(Nil)       = Nil"
 		, "initHalf(Cons(a,x)) = Cons(a,initHalfWork(x,x))"
 		, ""
 		, "initHalfWork(xs, Nil)         = Nil"
@@ -171,14 +178,12 @@ examples =
 		, "                    = Cons(a,initHalfWork(x,y))"
 		])
 	, ("seive", unlines
-		[ "get (a) = seive (a)"
-		, "seive (Nil)               = Nil"
+		[ "seive (Nil)               = Nil"
 		, "seive (Cons(a,Nil))       = Nil"
 		, "seive (Cons(a,Cons(b,x))) = Cons(b,seive(x))"
 		])
 	, ("rev", unlines
-		[ "get (a) = reverse (a)"
-		, "reverse(xs) = rev(xs,Nil)"
+		[ "reverse(xs) = rev(xs,Nil)"
 		, "rev(Nil,y)       = y"
 		, "rev(Cons(a,x),y) = rev(x,Cons(a,y))"
 		])
@@ -253,6 +258,8 @@ jQueryMain = do
         setHeader "Cache-control" "max-age=36000000" -- 1000 h
         outputFPS $ jQueryCode
     
+defaultPlayCode = -- Are we only considering [Nat] here?
+        Just "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
 
 formMain = do
         setHeader "Content-type" "application/xhtml+xml; charset=UTF-8"
@@ -272,29 +279,48 @@ formMain = do
                             return $ fromMaybe code $ loadWhat >>= flip lookup examples 
             _ -> return code
         
-        let mbAST = parseString code
+        let eAST = parseString code
 
         let conf = defaultConfig { outputMode = outMode, execMode = exMode, isShowType = showTypes }
-        let parseError = either (Just . show) (const Nothing) mbAST
+        let parseError = either (Just . show) (const Nothing) eAST
 
-        let genCode = case (todo,mbAST) of
-                (Just Load, _) -> Nothing
-                (Just _, Right ast) -> Just $ render $ case exMode of 
+        let (genCodeM,getM) = case (todo,eAST) of
+                (Just Load, _) -> (Nothing, Nothing)
+                (Just _, Right ast) ->
+                    (  Just $ render $ case exMode of 
                        Normal -> outputCode conf False ast (typeInference ast)
                        Shapify -> outputCode conf False ast (shapify $ typeInference ast)
                        ShapifyPlus -> outputCode conf True  ast (introNat $ shapify $ typeInference ast)
-                _ -> Nothing
+                    ,  firstDeclaredName ast
+                    )
+                _ -> (Nothing, Nothing)
 
-        let defaultPlayCode = Just $ "default code"
-
-        playCode <- case (todo,genCode) of
+        pcM <- getInput "playCode" 
+        (playCode, playErrorM) <- case (todo,getM,genCodeM,pcM) of
             -- The user successfully generated code to play with, insert default playCode.
             -- Do not use the user input, as he probably switched to a new example.
-            (Just BiDi, Just _) -> return defaultPlayCode
+            (Just BiDi, _, Just _, _) -> return (defaultPlayCode, Nothing)
             -- The user played with the code
-            (Just EvalGet, Just _) -> (`mplus` defaultPlayCode) <$> getInput "playCode"
-            (Just EvalPut, Just _) -> (`mplus` defaultPlayCode) <$> getInput "playCode"
-            (_, _ ) -> return Nothing
+            (Just EvalGet, Just get, Just genCode, Just pc) -> do
+                view <- liftIO $ evaluateWith genCode pc (get ++ " source")
+                case view of 
+                    Left err -> return $ (Just pc, Just err)
+                    Right dat -> return $ (\r -> (Just r, Nothing))
+                                        $ addDefiniton "view" dat 
+                                        $ delDefinition "result"
+                                        $ pc
+            (Just EvalGet, _, Just genCode, Nothing) -> do
+                return (defaultPlayCode, Nothing)
+            (Just EvalPut, Just get, Just genCode, Just pc) -> do
+                view <- liftIO $ evaluateWith genCode pc (get ++ "_B source view")
+                case view of 
+                    Left err -> return $ (Just pc, Just err)
+                    Right dat -> return $ (\r -> (Just r, Nothing))
+                                        $ addDefiniton "result" dat 
+                                        $ pc
+            (Just EvalPut, _, Just _, Nothing) -> do
+                return (defaultPlayCode, Nothing)
+            _ -> return (Nothing, Nothing)
 
         scrollX <- getInput "scrollx"
         scrollY <- getInput "scrolly"
@@ -307,8 +333,27 @@ formMain = do
                      exMode
                      outMode
                      showTypes
-                     genCode
+                     genCodeM
                      playCode
+                     playErrorM
+
+evaluateWith :: String -> String -> String -> IO (Either String String)
+evaluateWith genCode playCode expr =
+    withinTmpDir $ do
+        BS.writeFile "BUtil.hs" bUtilCode
+        writeFile "Main.hs" $ "module Main where\n" ++ genCode
+        liftIO $ catchInterpreterErrors $ simpleInterpret mods imports playCode expr
+  where mods = 
+            [ "BUtil"
+            , "Main"
+            --, "Data.Maybe"
+            ]
+        imports = mods ++
+            [ "Data.Maybe"
+            ]
+
+withFullSource genCode playCode = genCode' ++ "\n" ++ playCode
+    where genCode' = unlines . filter (not . isPrefixOf "import") . lines $ genCode
 
 astInfo (Left err) = maindiv << p << (
 	"Can not parse your definition:" +++ br +++
@@ -316,25 +361,7 @@ astInfo (Left err) = maindiv << p << (
 	mkSubmit True Check)
 
 astInfo (Right source) = maindiv << (
-	p << ("Definition parsed succesfully"
-{-		"Your definitions have the following types: " +++
-		pre << ("get :: " ++ getType ++ "\n"++
-		        "source :: " ++ sourceType) +++
-		"Therefore, an updater can be derived by " +++
-		case (canBff, canBffEq, canBffOrd) of
-			(True, _, _) -> 
-				tt << "bff" +++ ", " +++
-				tt << "bff_Eq" +++ ", and " +++
-				tt << "bff_Ord" +++ "."
-			(False, True, _) -> 
-				tt << "bff_Eq" +++ " and " +++
-				tt << "bff_Ord" +++ "."
-			(False, False, True) -> 
-				tt << "bff_Ord" +++ " only."
-			(False, False, False) -> 
-				"none of the " +++ tt << "bff" +++ " functions."
--}                                
-	) +++
+	p << ("Definition parsed succesfully") +++
 	p << mkSubmit True Check
 	)
 
@@ -371,6 +398,11 @@ htmlMB Nothing  f = noHtml
 htmlMB (Just x) f = f x
 
 readOnly = emptyAttr "readonly"
+
+
+firstDeclaredName (AST []) = Nothing
+firstDeclaredName (AST (Decl n _ _ _:_)) = Just (show n)
+
 {-
  - Temp-Dir functions taken from XMonad/Lock.hs and simplified
  -}
