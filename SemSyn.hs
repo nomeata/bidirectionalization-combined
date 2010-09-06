@@ -59,7 +59,7 @@ outputCode conf isShapify orig ast =
                   ppr (typeFilter ast)
          PseudoCode  -> vcat
                 [ ppr (constructTypeDecl p2)
-                , ppr orig $$  ppr (typeFilter p1) $$ ppr (typeFilter p2) $$ ppr (typeFilterT p3)
+                , ppr orig $$ ppr (typeFilter p1) $$ ppr (typeFilter p2) $$ ppr (typeFilterT p3)
                 ]
          HaskellCode -> vcat $
                 [ text "import Control.Monad"

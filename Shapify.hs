@@ -34,6 +34,8 @@ introNat (AST decls) =
 
       replP (PVar i (TCon (Name "List") [TCon (Name "Unit") []]) x)
           = PVar i (TCon (Name "Nat") []) x
+      replP (PVar i t x) 
+          = PVar i (replT t) x 
       replP (PCon i (TCon (Name "List") [TCon (Name "Unit") []]) 
                       (Name "Nil") [])
           = zP i
@@ -42,9 +44,11 @@ introNat (AST decls) =
           = sP i (replP y)
       replP (PCon i t c ps)
           = PCon i (replT t) c (map replP ps)
-
+ 
       replE (EVar i (TCon (Name "List") [TCon (Name "Unit") []]) x)
           = EVar i (TCon (Name "Nat") []) x
+      replE (EVar i t x) 
+          = EVar i (replT t) x 
       replE (ECon i (TCon (Name "List") [TCon (Name "Unit") []]) 
                       (Name "Nil") [])
           = zE i 
