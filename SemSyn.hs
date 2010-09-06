@@ -47,9 +47,8 @@ data OutputMode = PseudoCode | HaskellCode | ForwardCode
 defaultConfig = Config { 
                   inputFile   = Nothing, 
                   execMode    = Normal, 
-                  outputMode  = PseudoCode,
+                  outputMode  = HaskellCode,
                   isShowType  = True  }
-
 
 outputCode :: Config -> Bool -> AST -> AST -> Doc
 outputCode conf isShapify orig ast =
