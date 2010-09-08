@@ -80,7 +80,7 @@ myInterpreter mods imports todo exp = timeoutIO $ do
 		unsafeSetGhcOption "-fno-monomorphism-restriction"
                 unsafeSetGhcOption "-fno-warn-warnings-deprecations"
                 
-		liftIO $ putStrLn exp
+		--liftIO $ putStrLn exp --this makes it impossible to run at www-ps.uni-bonn.de
                 ret <- todo exp
 
                 -- Hopefully removes temporary files
