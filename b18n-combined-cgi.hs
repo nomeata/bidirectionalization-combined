@@ -66,7 +66,7 @@ page (PageInfo {..}) =
 		)
 			
 	) +++
-        form ! [method "POST",
+        form ! [method "post",
                 action "#",
                 strAttr "onsubmit" "saveScroll()"
             ] << (
@@ -80,7 +80,7 @@ page (PageInfo {..}) =
 
 			p << (
 				concatHtml (map (\(name,thisCode) -> 
-					radio "load" name
+					radio "loadCode" name
 					! (if thisCode == viewFunction then [checked] else [])
 					+++ name +++ " "
 				) examples) +++
@@ -284,7 +284,7 @@ formMain = do
 	code <- fromMaybe defaultCode <$> getInput "code"
 	
         code <- case todo of
-            Just Load -> do loadWhat <- getInput "load"
+            Just Load -> do loadWhat <- getInput "loadCode"
                             return $ fromMaybe code $ loadWhat >>= flip lookup examples 
             _ -> return code
         
