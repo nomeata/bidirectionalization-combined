@@ -37,6 +37,7 @@ data PageInfo = PageInfo
     , outMode :: OutputMode
     , showTypes :: Bool
     , generatedModuleMB :: Maybe String
+    , showCode :: Bool
     , playCodeMB :: Maybe String
     , playErrorM :: Maybe String
     } 
@@ -71,6 +72,7 @@ page (PageInfo {..}) =
             ] << (
                 hidden "scrollx" (fromMaybe "0" scrollX) +++
                 hidden "scrolly" (fromMaybe "0" scrollY) +++
+                hidden "showCode" (show showCode) +++
 		maindiv << (
 			 p << (
 				"Please enter the view function. (TODO: Elaborate this text)"
@@ -117,8 +119,12 @@ page (PageInfo {..}) =
 			) +++
                         ( htmlMB generatedModuleMB $ \ generatedModule -> 
                             {- maybe noHtml outputErrors errors +++ -}
-                            p << ("Result:"+++ br +++
-                                pre << generatedModule
+                            p << ("Result" +++
+                                thespan ! [ identifier "hideShow"
+                                          , thestyle "display:none"] << (
+                                    " (" +++ hotlink "javascript:" << "Hide/Show" +++ ")"
+                                ) +++ ":" +++ br +++
+                                pre ! [identifier "genCode" ] << generatedModule
 
                             )
 
@@ -298,6 +304,12 @@ formMain = do
                     )
                 _ -> (Nothing, Nothing)
 
+        showCode <- case (todo,outMode) of
+            (Just BiDi, HaskellCode) -> return False
+            (Just BiDi, _)           -> return True
+            (_,         HaskellCode) -> maybe False read <$> getInput "showCode"
+            (_,         _)           -> maybe True read <$> getInput "showCode"
+
         pcM <- getInput "playCode" 
         -- Playcode can only by used when the output is exMode
         (playCode, playErrorM) <- if outMode /= HaskellCode then return (Nothing, Nothing) else
@@ -339,6 +351,7 @@ formMain = do
                      outMode
                      showTypes
                      genCodeM
+                     showCode
                      playCode
                      playErrorM
 
@@ -392,11 +405,19 @@ cssStyle = unlines
 
 jsCode = unlines 
     [ "function saveScroll () {"
-    , "    $(\"#scrolly\").val($(\"html\").scrollTop());"
+    , "    $('#scrolly').val($('html').scrollTop());"
     , "}"
     , "function restoreScroll () {"
-    , "    $(\"html\").scrollTop($(\"#scrolly\").val());"
+    , "    $('html').scrollTop($('#scrolly').val());"
     , "}"
+    , "$(document).ready(function () {"
+    , "   $('#hideShow').show();"
+    , "   if ($('#showCode').val() == 'False')"
+    , "     { $('#genCode').hide(); };"
+    , "   $('#hideShow a').click(function () {"
+    , "      $('#genCode').toggle('slow');"
+    , "   })"
+    , "})"
     ]
 
 htmlMB Nothing  f = noHtml
