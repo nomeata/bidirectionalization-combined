@@ -42,7 +42,7 @@ data PageInfo = PageInfo
 
 page (PageInfo {..}) =
        header << (
-	thetitle << "Combining Syntatic and Semantic Bidirectionalization" +++
+	thetitle << "(Combining) Syntatic and Semantic Bidirectionalization" +++
 	style ! [ thetype "text/css" ] << cdata cssStyle +++
 	script ! [ thetype "text/javascript", src "?jquery" ] << noHtml +++
         script ! [ thetype "text/javascript" ] << cdata jsCode 
