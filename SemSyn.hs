@@ -89,6 +89,7 @@ outputCode conf_ isShapify orig ast =
          SyntacticB18n ->
              if isHaskellify conf then 
                  vcat [ text "import Control.Monad" 
+                      , text "import BUtil"
                       , ppr (constructTypeDecl p2)
                       , ppr $ generateCodeBwd (orig, p1, p2, p3) ]
              else 
