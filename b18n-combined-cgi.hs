@@ -117,7 +117,7 @@ page (PageInfo {..}) =
 		maindiv ! [ identifier "output" ]<< (
 			p << (
 				"You can calculate a derived put function with various options:" ) +++
-			p << ( "Execution mode: " +++
+			p << ( "Preprocessing steps: " +++
 			       concatHtml (map (\mode -> 
 			          radio "execMode" (show mode) 
 					! (guard (mode == execMode config) >> return checked)
