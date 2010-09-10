@@ -49,7 +49,7 @@ page (PageInfo {..}) =
        ) +++
        body ! [ strAttr "onload" "restoreScroll()" ] << (
 	thediv ! [theclass "top"] << (
-		thespan ! [theclass "title"] << "Combining Syntatic and Semantic Bidirectionalization" +++
+		thespan ! [theclass "title"] << "(Combining) Syntatic and Semantic Bidirectionalization" +++
 		thespan ! [theclass "subtitle"] << "Prototype implementation"
 	) +++
 	maindiv << (
