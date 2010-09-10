@@ -1,0 +1,3 @@
+sieve (Nil)               = Nil
+sieve (Cons(a,Nil))       = Nil
+sieve (Cons(a,Cons(b,x))) = Cons(b,sieve(x))

@@ -202,10 +202,10 @@ examples =
 		, "initHalfWork(Cons(a,x), Cons(b,Cons(c,y)))"
 		, "                    = Cons(a,initHalfWork(x,y))"
 		])
-	, ("seive", unlines
-		[ "seive (Nil)               = Nil"
-		, "seive (Cons(a,Nil))       = Nil"
-		, "seive (Cons(a,Cons(b,x))) = Cons(b,seive(x))"
+	, ("sieve", unlines
+		[ "sieve (Nil)               = Nil"
+		, "sieve (Cons(a,Nil))       = Nil"
+		, "sieve (Cons(a,Cons(b,x))) = Cons(b,sieve(x))"
 		])
 	, ("rev", unlines
 		[ "reverse(xs) = rev(xs,Nil)"
