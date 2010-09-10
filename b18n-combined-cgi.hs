@@ -29,13 +29,11 @@ import BundledCode
 import JQuery
 
 data PageInfo = PageInfo
-    { scrollX :: Maybe String
+    { config :: Config
+    , scrollX :: Maybe String
     , scrollY :: Maybe String
     , viewFunction :: String
     , parseError :: Maybe String
-    , exMode  :: ExecMode
-    , b18nMode_ :: B18nMode
-    , showTypes :: Bool
     , generatedModuleMB :: Maybe String
     , showCode :: Bool
     , playCodeMB :: Maybe String
@@ -103,17 +101,17 @@ page (PageInfo {..}) =
 			p << ( "Execution mode: " +++
 			       concatHtml (map (\mode -> 
 			          radio "execMode" (show mode) 
-					! (guard (mode == exMode) >> return checked)
+					! (guard (mode == execMode config) >> return checked)
 					+++ show mode +++ " "
                                 ) [Normal, Shapify, ShapifyPlus]) +++ br +++
 			       "Output mode: " +++
 			       concatHtml (map (\mode -> 
 			          radio "b18nMode" (show mode) 
-					! (guard (mode == b18nMode_) >> return checked)
+					! (guard (mode == b18nMode config) >> return checked)
 					+++ show mode +++ " "
                                 ) [SyntacticB18n, SemanticB18n, CombinedB18n, NoB18n]) +++ br +++
 			       "Show types " +++ checkbox "showTypes" "showTypes"
-                                        ! (guard showTypes >> return checked)
+                                        ! (guard (isShowType config) >> return checked)
                                         +++ br +++
 			       mkSubmit True BiDi
 			) +++
@@ -273,9 +271,16 @@ defaultPlayCode get = -- Are we only considering [Nat] here?
 formMain = do
         setHeader "Content-type" "application/xhtml+xml; charset=UTF-8"
 
-        exMode  <- maybe Normal read <$> getInput "execMode"
-        b18nMode_ <- maybe CombinedB18n read <$> getInput "b18nMode"
-        showTypes <- isJust <$> getInput "showTypes"
+        conf <- do
+            execMode'  <- maybe Normal read <$> getInput "execMode"
+            b18nMode' <- maybe CombinedB18n read <$> getInput "b18nMode"
+            isShowType' <- isJust <$> getInput "showTypes"
+            return $ defaultConfig
+                { isHaskellify = True
+                , b18nMode = b18nMode'
+                , execMode = execMode'
+                , isShowType = isShowType'
+                }
 	
 	todo <- msum <$> sequence (
             map (\what -> fmap (const what) <$> getInput (submitId what))
@@ -290,15 +295,13 @@ formMain = do
         
         let eAST = parseString code
 
-        let conf = defaultConfig
-             { isHaskellify = True, b18nMode = b18nMode_, execMode = exMode, isShowType = showTypes }
 
         let parseError = either (Just . show) (const Nothing) eAST
 
         let (genCodeM,getM) = case (todo,eAST) of
                 (Just Load, _) -> (Nothing, Nothing)
                 (Just _, Right ast) ->
-                    (  Just $ render $ case exMode of 
+                    (  Just $ render $ case execMode conf of 
                        Normal -> outputCode conf False ast (typeInference ast)
                        Shapify -> outputCode conf False ast (shapify $ typeInference ast)
                        ShapifyPlus -> outputCode conf True  ast (introNat $ shapify $ typeInference ast)
@@ -345,13 +348,11 @@ formMain = do
         scrollY <- getInput "scrolly"
 
         outputFPS $ fromString $ showHtml $ page $
-            PageInfo scrollX
+            PageInfo conf
+                     scrollX
                      scrollY
                      code
                      parseError
-                     exMode
-                     b18nMode_
-                     showTypes
                      genCodeM
                      showCode
                      playCode
