@@ -53,16 +53,35 @@ page (PageInfo {..}) =
 		thespan ! [theclass "subtitle"] << "Prototype implementation"
 	) +++
 	maindiv << (
-        	p << ("This tool allows you to experiment with the "+++
-                      "method described in the paper “" +++
+        	p << "This tool allows you to experiment with the bidirectionalization methods described in the following papers: " +++
+                ulist << (
+                    li << (
+                      "“" +++
 		      hotlink "http://doi.acm.org/10.1145/1291151.1291162"
                         << "Bidirectionalization transformation based on automatic derivation of view complement functions" +++
-		      "” (ICFP'10) by " +++
+		      "” (ICFP'07) by " +++
 		      hotlink "http://www.kb.ecei.tohoku.ac.jp/~kztk/"
-                        << "Kazutaka Matsuda" +++
-	              "."
+                        << "Kazutaka Matsuda" +++ ", " +++
+                      "Zhenjiang Hu, " +++
+                      "Keisuke Nakano, " +++
+                      "Makoto Hamana and " +++
+                      "Gunma University"
+                    ) +++
+                    li << (
+                      "“" +++
+		      hotlink "http://doi.acm.org/10.1145/1480881.1480904"
+                        << "Bidirectionalization for free! (Pearl)" +++
+		      "” (POPL'09) by " +++
+		      hotlink "http://www.iai.uni-bonn.de/~jv/"
+                        << "Janis Voigtländer"
+                    ) +++
+                    li << (
+                      "“" +++
+		      hotlink ""
+                        << "TBT" +++
+		      "” (ICFP'10)"
+                    )
 		)
-			
 	) +++
         form ! [method "post",
                 action "#",
@@ -147,14 +166,18 @@ page (PageInfo {..}) =
                 ))
 	) +++
         maindiv << (
-		p << (
+	    p << (
 		"The source code of this application and the underlying library can be found " +++
 		hotlink "TODO" << "here"+++
-		".") +++
-		p << ("© 2010 Joachim Breitner <" +++
-                      hotlink "mailto:mail@joachim-breitner.de" << "mail@joachim-breitner.de" +++
-		      ">")
-		)	
+		". " +++
+                "The code for the web interface is based on " +++
+                hotlink "http://www-ps.iai.uni-bonn.de/cgi-bin/bff.cgi" << 
+                    "the demo interface from “Bidirectionalization for free!”"
+            ) +++
+	    p << ("© 2010 Joachim Breitner <" +++
+                hotlink "mailto:mail@joachim-breitner.de" << "mail@joachim-breitner.de" +++
+	      ">")
+	    )	
 	)
        
 
