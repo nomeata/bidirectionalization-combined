@@ -323,11 +323,7 @@ formMain = do
                     )
                 _ -> (Nothing, Nothing)
 
-        showCode <- case (todo) of
-         --   (Just BiDi) -> return False
-            (Just BiDi)           -> return True
-         --  (_        ) -> maybe False read <$> getInput "showCode"
-            (_        )           -> maybe True read <$> getInput "showCode"
+        showCode <- maybe False read <$> getInput "showCode"
 
         pcM <- getInput "playCode" 
         -- Playcode can only by used when the output is exMode
