@@ -142,11 +142,11 @@ outputCode conf_ isShapify orig ast =
       typeFilterT = if isShowType conf then id else eraseTypeT
       genBwdDefBff (Name fName) =
           ppr (Name fName) <> text "_B" $$
-              nest 4 (text "= bff " <> ppr (Name fName)) $$
+              nest 4 (text "= bff Main." <> ppr (Name fName)) $$
           ppr (Name fName) <> text "_B_Eq" $$
-              nest 4 (text "= bff_Eq " <> ppr (Name fName)) $$
+              nest 4 (text "= bff_Eq Main." <> ppr (Name fName)) $$
           ppr (Name fName) <> text "_B_Ord" $$
-              nest 4 (text "= bff_Ord " <> ppr (Name fName))  
+              nest 4 (text "= bff_Ord Main." <> ppr (Name fName))  
       genBwdDef (Name fName,(TFun is ts t)) =
           case (ts,t) of 
             ([TCon (Name "List") [TVar i]],TCon (Name "List") [TVar j]) | i == j  ->
