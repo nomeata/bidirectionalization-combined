@@ -34,7 +34,7 @@ data PageInfo = PageInfo
     , viewFunction :: String
     , parseError :: Maybe String
     , exMode  :: ExecMode
-    , outMode :: OutputMode
+    , b18nMode_ :: B18nMode
     , showTypes :: Bool
     , generatedModuleMB :: Maybe String
     , showCode :: Bool
@@ -108,10 +108,10 @@ page (PageInfo {..}) =
                                 ) [Normal, Shapify, ShapifyPlus]) +++ br +++
 			       "Output mode: " +++
 			       concatHtml (map (\mode -> 
-			          radio "outputMode" (show mode) 
-					! (guard (mode == outMode) >> return checked)
+			          radio "b18nMode" (show mode) 
+					! (guard (mode == b18nMode_) >> return checked)
 					+++ show mode +++ " "
-                                ) [PseudoCode, HaskellCode, ForwardCode]) +++ br +++
+                                ) [SyntacticB18n, SemanticB18n, CombinedB18n, NoB18n]) +++ br +++
 			       "Show types " +++ checkbox "showTypes" "showTypes"
                                         ! (guard showTypes >> return checked)
                                         +++ br +++
@@ -274,7 +274,7 @@ formMain = do
         setHeader "Content-type" "application/xhtml+xml; charset=UTF-8"
 
         exMode  <- maybe Normal read <$> getInput "execMode"
-        outMode <- maybe HaskellCode read <$> getInput "outputMode"
+        b18nMode_ <- maybe CombinedB18n read <$> getInput "b18nMode"
         showTypes <- isJust <$> getInput "showTypes"
 	
 	todo <- msum <$> sequence (
@@ -290,7 +290,9 @@ formMain = do
         
         let eAST = parseString code
 
-        let conf = defaultConfig { outputMode = outMode, execMode = exMode, isShowType = showTypes }
+        let conf = defaultConfig
+             { isHaskellify = True, b18nMode = b18nMode_, execMode = exMode, isShowType = showTypes }
+
         let parseError = either (Just . show) (const Nothing) eAST
 
         let (genCodeM,getM) = case (todo,eAST) of
@@ -304,15 +306,15 @@ formMain = do
                     )
                 _ -> (Nothing, Nothing)
 
-        showCode <- case (todo,outMode) of
-            (Just BiDi, HaskellCode) -> return False
-            (Just BiDi, _)           -> return True
-            (_,         HaskellCode) -> maybe False read <$> getInput "showCode"
-            (_,         _)           -> maybe True read <$> getInput "showCode"
+        showCode <- case (todo) of
+         --   (Just BiDi) -> return False
+            (Just BiDi)           -> return True
+         --  (_        ) -> maybe False read <$> getInput "showCode"
+            (_        )           -> maybe True read <$> getInput "showCode"
 
         pcM <- getInput "playCode" 
         -- Playcode can only by used when the output is exMode
-        (playCode, playErrorM) <- if outMode /= HaskellCode then return (Nothing, Nothing) else
+        (playCode, playErrorM) <- -- if outMode /= HaskellCode then return (Nothing, Nothing) else
             case (todo,getM,genCodeM,pcM) of
             -- The user successfully generated code to play with, insert default playCode.
             -- Do not use the user input, as he probably switched to a new example.
@@ -348,7 +350,7 @@ formMain = do
                      code
                      parseError
                      exMode
-                     outMode
+                     b18nMode_
                      showTypes
                      genCodeM
                      showCode
