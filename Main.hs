@@ -68,9 +68,9 @@ options =
              (text "Specify program's input file")
              (UnaryAction (\x conf -> 
                                conf { inputFile = Just x })),
-      Option "-s" (Just "--shapify") (empty)
-             (text "Convert terms with type \"T a\" to \"T Unit\".")
-             (NullaryAction (\conf -> conf {execMode = Shapify})),
+--       Option "-s" (Just "--shapify") (empty)
+--              (text "Convert terms with type \"T a\" to \"T Unit\".")
+--              (NullaryAction (\conf -> conf {execMode = Shapify})),
       Option "-n" (Just "--natify") empty
              (text "Convert terms with \"List a\" to \"Nat\".")
              (NullaryAction (\conf -> conf {execMode = ShapifyPlus})),
@@ -78,22 +78,37 @@ options =
              (text "Show this help message.")
              (NullaryAction (\conf -> conf {execMode = Help})),
       Option "-H"  (Just "--haskell-code") empty
-             (text "Return a Haskell source code of \"put\" function."
+             (text "(Obsolete) Return a Haskell source code of \"put\" function."
               $$ text "This options implies \"-n\".")
              (NullaryAction (\conf -> conf {outputMode = HaskellCode, execMode = ShapifyPlus})),
       Option "-P"  (Just "--pseudo-code") empty
-             (text "Return a pseudo code only after syntatic bidirectionalizatoin."
+             (text "(Obsolete) Return a pseudo code only after syntatic bidirectionalizatoin."
               $$ text "Note that \"wrapping\" code for semantic bidirectionalization is not produced.")
              (NullaryAction (\conf -> conf {outputMode = PseudoCode })),
       Option "-F"  (Just "--forward-only") empty
-             (text"Return a pseudo code without bidirecionalization.")
+             (text"(Obsolete) Return a pseudo code without bidirecionalization.")
              (NullaryAction (\conf -> conf {outputMode = ForwardCode })), 
       Option "-U"  (Just "--without-type") empty 
              (text"Pseudo code without type. This option affects the output of \"-P\" and \"-F\".")
              (NullaryAction (\conf -> conf {isShowType = False})),
       Option "-T"  (Just "--with-type") empty 
              (text"Pseudo code with type. This option affects the output of \"-P\" and \"-F\".")
-             (NullaryAction (\conf -> conf {isShowType = True}))
+             (NullaryAction (\conf -> conf {isShowType = True})),
+      Option "-no"  (Just "--no-bidrectionalization") empty
+             (text"No Bidirectionalization (transformation stops after pre-processing)")
+             (NullaryAction (\conf -> conf {b18nMode = NoB18n})),
+      Option "-syn" (Just "--syntactic") empty 
+             (text"Syntatic Bidirectionalization.")
+             (NullaryAction (\conf -> conf {b18nMode = SyntacticB18n, outputMode = OM_NotSpecified  })),
+      Option "-sem" (Just "--semantic") empty 
+             (text"Semantic Bidirectionalization.")
+             (NullaryAction (\conf -> conf {b18nMode = SemanticB18n, outputMode = OM_NotSpecified  })),
+      Option "-comb" (Just "--combined") empty
+             (text"Combined Bidirectionalization.")
+             (NullaryAction (\conf -> conf {b18nMode = CombinedB18n, outputMode = OM_NotSpecified })),
+      Option "-hs"   (Just "--haskell") empty
+             (text"Output Haskell-runnable code.")
+             (NullaryAction (\conf -> conf {isHaskellify = True}))
 --       Option "-d" (Just "--debug-exec") empty
 --              (text"Debug Execution (Do not use this option).")
 --              (NullaryAction $ \conf -> conf {execMode = Debug})
@@ -111,7 +126,7 @@ matchOption optString options
                   r
            
 parseArgs :: [[Char]] -> Config -> Config 
-parseArgs args conf =
+parseArgs args conf = 
     case args of 
       ("-d":xs) -> 
           parseArgs xs (conf { execMode = Debug })
@@ -202,7 +217,7 @@ usage = show $
 
 main :: IO ()
 main = do { args <- getArgs 
-          ; let conf = parseArgs args defaultConfig
+          ; let conf = adjustConfig $ parseArgs args defaultConfig
           ; case execMode conf of 
               Help -> putStrLn usage 
               _ -> 
@@ -216,13 +231,15 @@ main = do { args <- getArgs
                          Left err -> hPutStrLn stderr (show err)
                          Right cprog -> 
                              case execMode conf of 
-                               Normal -> print $
-                                   outputCode conf False (cprog) (typeInference cprog)
-                               Shapify -> print $
-                                   outputCode conf False (cprog) (shapify $ typeInference cprog)
-                                   -- putStrLn "Not Supported Now."
-                               ShapifyPlus -> print $
-                                   outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
+                               Normal | (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n) -> 
+                                   print $
+                                         outputCode conf False (cprog) (typeInference cprog)
+--                                Shapify -> print $
+--                                    outputCode conf False (cprog) (shapify $ typeInference cprog)
+--                                    -- putStrLn "Not Supported Now."
+                               ShapifyPlus -> 
+                                   print $
+                                         outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
                                Debug ->
                                    do { print $ ppr   $ cprog
                                       -- ; print $ pprAM $ constructAutomaton (typeInference cprog) initTAMap
@@ -239,6 +256,8 @@ main = do { args <- getArgs
                                       ; print $ ppr p1 $$ ppr p2 $$ ppr p3
                                       ; putStrLn ""
                                       }
+                               _ ->
+                                   print $ outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
                      }
           }
 

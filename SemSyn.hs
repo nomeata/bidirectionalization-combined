@@ -32,50 +32,120 @@ data Config
     = Config 
       { 
         inputFile   :: Maybe String, -- ^ Path to input file
-        execMode    :: ExecMode,
-        outputMode  :: OutputMode, 
+        execMode    :: ExecMode,  
+        b18nMode    :: B18nMode, 
+        outputMode  :: OutputMode,   -- ^ Obsolete   
+        isHaskellify :: Bool, 
         isShowType  :: Bool
       }
+    deriving Show 
 
 data ExecMode 
     = Normal | Shapify | ShapifyPlus | Help | Debug 
     deriving (Eq, Read, Show)
 
-data OutputMode = PseudoCode | HaskellCode | ForwardCode
+data OutputMode = PseudoCode | HaskellCode | ForwardCode | OM_NotSpecified 
+    deriving (Eq, Read, Show)
+
+data B18nMode = SyntacticB18n | SemanticB18n | CombinedB18n | NoB18n 
     deriving (Eq, Read, Show)
 
 defaultConfig = Config { 
-                  inputFile   = Nothing, 
-                  execMode    = Normal, 
-                  outputMode  = HaskellCode,
-                  isShowType  = True  }
+                  inputFile    = Nothing, 
+                  execMode     = Normal, 
+                  b18nMode     = CombinedB18n, 
+                  outputMode   = OM_NotSpecified, 
+                  isHaskellify = False, 
+                  isShowType   = True  }
+
+-- | Since some combination of the config options is useless, 
+--   this function adjust some configuration to valid one.
+adjustConfig :: Config -> Config 
+-- adjustConfig (conf@(Config {b18nMode = CombinedB18n})) =
+--     conf { isHaskellify = True, execMode = ShapifyPlus }
+-- adjustConfig (conf@(Config {b18nMode = SemanticB18n})) =
+--     conf { isHaskellify = True, execMode = Normal, outputMode = ForwardCode }
+-- adjustConfig (conf@(Config {b18nMode = SyntacticB18n})) =
+--     conf { execMode = Normal, outputMode = PseudoCode }
+adjustConfig (conf@(Config {outputMode = ForwardCode})) = 
+    conf { b18nMode = NoB18n }
+adjustConfig (conf@(Config {outputMode = HaskellCode})) | execMode conf /= Help = 
+    conf { execMode = ShapifyPlus, isHaskellify = True, b18nMode = CombinedB18n  }
+adjustConfig (conf@(Config {outputMode = PseudoCode})) =
+    conf { isHaskellify = False, b18nMode = SyntacticB18n }
+adjustConfig conf = conf 
+
+
 
 outputCode :: Config -> Bool -> AST -> AST -> Doc
-outputCode conf isShapify orig ast =
+outputCode conf_ isShapify orig ast = 
     let (p1,p2,p3) = constructBwdFunction ast
-    in case outputMode conf of 
-         ForwardCode ->
-                  ppr (typeFilter ast)
-         PseudoCode  -> vcat
-                [ ppr (constructTypeDecl p2)
-                , ppr orig $$ ppr (typeFilter p1) $$ ppr (typeFilter p2) $$ ppr (typeFilterT p3)
-                ]
-         HaskellCode -> vcat $
-                [ text "import Control.Monad"
-                , text "import BUtil"
-                ] ++ (
-                if isShapify
-                then map genBwdDef $
-                        let AST decls = typeInference orig
-                        in map (\(Decl f t _ _:_) -> (f,t)) $ groupBy isSameFunc decls
-                else []                                     
-                ) ++
-                [ ppr (constructTypeDecl p2)
-                , ppr $ generateCodeBwd (orig,p1,p2,p3)
-                ]
+    in case b18nMode conf of 
+         NoB18n -> 
+             if isHaskellify conf then 
+                 ppr (generateCodeDet ast) 
+             else
+                 ppr (typeFilter ast)
+         SyntacticB18n ->
+             if isHaskellify conf then 
+                 vcat [ text "import Control.Monad" 
+                      , ppr (constructTypeDecl p2)
+                      , ppr $ generateCodeBwd (orig, p1, p2, p3) ]
+             else 
+                 vcat [ ppr (constructTypeDecl p2)
+                      , ppr orig $$ ppr (typeFilter p1) $$ ppr (typeFilter p2) $$ ppr (typeFilterT p3) ]
+         SemanticB18n -> vcat $ 
+             [ text "import Data.Bff" ] ++
+             [ text "import BUtil" ] ++ 
+             (map genBwdDefBff $ 
+                   let AST decls = typeInference orig 
+                   in map (\(Decl f t _ _:_) -> f) $ groupBy isSameFunc decls) ++
+             [ ppr $ generateCodeDet p1 ]             
+         CombinedB18n -> vcat $ 
+             [ text "import Control.Monad"
+             , text "import BUtil"
+             ] ++ (
+             if isShapify
+             then map genBwdDef $
+                     let AST decls = typeInference orig
+                     in map (\(Decl f t _ _:_) -> (f,t)) $ groupBy isSameFunc decls
+             else []                                     
+             ) ++
+             [ ppr (constructTypeDecl p2)
+             , ppr $ generateCodeBwd (orig,p1,p2,p3)
+             ]
+                             
+-- case outputMode conf of 
+--          ForwardCode ->
+--                   ppr (typeFilter ast)
+--          PseudoCode  -> vcat
+--                 [ ppr (constructTypeDecl p2)
+--                 , ppr orig $$ ppr (typeFilter p1) $$ ppr (typeFilter p2) $$ ppr (typeFilterT p3)
+--                 ]
+--          HaskellCode -> vcat $
+--                 [ text "import Control.Monad"
+--                 , text "import BUtil"
+--                 ] ++ (
+--                 if isShapify
+--                 then map genBwdDef $
+--                         let AST decls = typeInference orig
+--                         in map (\(Decl f t _ _:_) -> (f,t)) $ groupBy isSameFunc decls
+--                 else []                                     
+--                 ) ++
+--                 [ ppr (constructTypeDecl p2)
+--                 , ppr $ generateCodeBwd (orig,p1,p2,p3)
+--                 ]
     where
+      conf       = adjustConfig conf_
       typeFilter  = if isShowType conf then id else eraseType
       typeFilterT = if isShowType conf then id else eraseTypeT
+      genBwdDefBff (Name fName) =
+          ppr (Name fName) <> text "_B" $$
+              nest 4 (text "= bff " <> ppr (Name fName)) $$
+          ppr (Name fName) <> text "_B_Eq" $$
+              nest 4 (text "= bff_Eq " <> ppr (Name fName)) $$
+          ppr (Name fName) <> text "_B_Ord" $$
+              nest 4 (text "= bff_Ord " <> ppr (Name fName))  
       genBwdDef (Name fName,(TFun is ts t)) =
           case (ts,t) of 
             ([TCon (Name "List") [TVar i]],TCon (Name "List") [TVar j]) | i == j  ->

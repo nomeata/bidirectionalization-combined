@@ -11,6 +11,10 @@ import Data.List (groupBy)
 import AST
 import Util
 
+generateCodeDet :: AST -> [ TH.Dec ] 
+generateCodeDet = convCmpl
+
+
 generateCodeBwd :: (AST, AST, AST, TAST) -> [ TH.Dec ]
 generateCodeBwd (orig, bwd, cmpl, tinv) = 
     convCmpl orig ++ convBWD bwd ++ convCmpl cmpl ++ convNDet tinv 

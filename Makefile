@@ -6,6 +6,6 @@ $(TARGET): Main.hs AST.hs Parser.hs Util.hs Type.hs Shapify.hs CodeGen.hs
 	ghc --make -o $(TARGET) Main.hs
 
 clean:
-	rm $(TARGET)
+	rm -rf $(TARGET)
 	rm -rf *.o *.hi
-	rm *~
+	rm -rf *~
