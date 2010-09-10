@@ -23,6 +23,8 @@ convP (PCon _ _ (Name "Cons") [p1,p2]) =
     TH.InfixP (convP p1) (TH.mkName ":") (convP p2)
 convP (PCon _ _ (Name "Nil") []) =
     TH.ListP []
+convP (PCon _ _ (Name "Unit") []) =
+    TH.TupP []
 convP (PCon _ _ c cs) = 
     TH.ConP (TH.mkName $ show c) $ map convP cs
 convP (PVar _ _ v)    = TH.VarP (TH.mkName $ show v) 
@@ -58,6 +60,7 @@ convCmpl (AST decls) = map convCmplF $ groupBy isSameFunc decls
       convE (EVar _ _ v)    = nameE v
       convE (ECon _ _ (Name "Cons") [e1,e2]) = TH.InfixE (Just $ convE e1) (TH.VarE $ TH.mkName ":") (Just $ convE e2)
       convE (ECon _ _ (Name "Nil")  [])      = TH.ListE []
+      convE (ECon _ _ (Name "Unit")  [])     = TH.TupE []
       convE (ECon _ _ c es) = apply (TH.ConE (name c)) $ map convE es 
       convE (EFun _ _ f es) = apply (TH.VarE (name f)) $ [TH.TupE $ map convE es ]
 
@@ -65,6 +68,7 @@ convCmpl (AST decls) = map convCmplF $ groupBy isSameFunc decls
 convE (EVar _ _ v)    = nameE v
 convE (ECon _ _ (Name "Cons") [e1,e2]) = TH.InfixE (Just $ convE e1) (TH.VarE $ TH.mkName ":") (Just $ convE e2)
 convE (ECon _ _ (Name "Nil")  [])      = TH.ListE []
+convE (ECon _ _ (Name "Unit") [])      = TH.TupE []
 convE (ECon _ _ c es) = apply (TH.ConE (name c)) $ map convE es 
 convE (EFun _ _ f es) = apply (TH.VarE (name f)) $ map convE es 
 
