@@ -136,7 +136,7 @@ page (PageInfo {..}) =
 			) +++
                         ( htmlMB generatedModuleMB $ \ generatedModule -> 
                             {- maybe noHtml outputErrors errors +++ -}
-                            p << ("Result" +++
+                            p << ("Result Code" +++
                                 thespan ! [ identifier "hideShow"
                                           , thestyle "display:none"] << (
                                     " (" +++ hotlink "javascript:" << "Hide/Show" +++ ")"
@@ -149,8 +149,10 @@ page (PageInfo {..}) =
 		) +++
                 ( htmlMB playCodeMB $ \playCode -> maindiv << ( 
                     p << (  "You can now play with the code. You can modify the " +++
-                            tt << "source" +++ " and calculate the view, or modify the " +++
-                            tt << "view" +++ " and calculate an updated souce." +++ br +++
+                            tt << "source" +++ " and calculate the " +++
+                            tt << "view" +++ ", or modify the " +++
+                            tt << "view" +++ " and calculate an updated "+++
+                            tt << "source" +++ "." +++ br +++
                             textarea ! [name "playCode", cols "120", rows "8" ] << playCode
                     ) +++
                     p << ( "Evaluate " +++
