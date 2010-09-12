@@ -279,13 +279,16 @@ jQueryMain = do
         setHeader "Cache-control" "max-age=36000000" -- 1000 h
         outputFPS $ jQueryCode
     
-defaultPlayCode get =
+defaultPlayCode (Config{..}) get =
         Just $ unlines
             [ "get = " ++ get
-            , "put = " ++ get ++ "_B" 
+            , "put = " ++ put
             , ""
             , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
             ]
+    where put | b18nMode == SyntacticB18n = get ++ "_140_B"
+              | b18nMode == SemanticB18n = get ++ "_B"
+              | b18nMode == CombinedB18n = get ++ "_Bbd rear 42"
 
 formMain = do
         setHeader "Content-type" "application/xhtml+xml; charset=UTF-8"
@@ -334,7 +337,7 @@ formMain = do
             -- The user successfully generated code to play with, insert default playCode.
             -- Do not use the user input, as he probably switched to a new example.
             (Just BiDi, Just get, Just _, _) ->
-                return (defaultPlayCode get, Nothing)
+                return (defaultPlayCode conf get, Nothing)
             -- The user played with the code
             (Just EvalGet, Just get, Just genCode, Just pc) -> do
                 view <- liftIO $ evaluateWith genCode pc ("get source")
@@ -345,7 +348,7 @@ formMain = do
                                         $ delDefinition "result"
                                         $ pc
             (Just EvalGet, Just get, Just genCode, Nothing) -> do
-                return (defaultPlayCode get, Nothing)
+                return (defaultPlayCode conf get, Nothing)
             (Just EvalPut, Just get, Just genCode, Just pc) -> do
                 view <- liftIO $ evaluateWith genCode pc ("put source view")
                 case view of 
@@ -354,7 +357,7 @@ formMain = do
                                         $ addDefiniton "result" dat 
                                         $ pc
             (Just EvalPut, Just get, Just _, Nothing) -> do
-                return (defaultPlayCode get, Nothing)
+                return (defaultPlayCode conf get, Nothing)
             _ -> return (Nothing, Nothing)
 
         scrollX <- getInput "scrollx"
