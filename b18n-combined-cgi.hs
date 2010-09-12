@@ -281,14 +281,14 @@ jQueryMain = do
     
 defaultPlayCode (Config{..}) get =
         Just $ unlines
-            [ "get = " ++ get
-            , "put = " ++ put
+            [ "get s = " ++ get ++ " s"
+            , "put s v = " ++ put
             , ""
             , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
             ]
-    where put | b18nMode == SyntacticB18n = get ++ "_140_B"
-              | b18nMode == SemanticB18n = get ++ "_B"
-              | b18nMode == CombinedB18n = get ++ "_Bbd rear 42"
+    where put | b18nMode == SyntacticB18n = get ++ "_140_B s v"
+              | b18nMode == SemanticB18n = get ++ "_B s v"
+              | b18nMode == CombinedB18n = get ++ "_Bbd rear 42 s v"
 
 formMain = do
         setHeader "Content-type" "application/xhtml+xml; charset=UTF-8"
