@@ -117,13 +117,7 @@ page (PageInfo {..}) =
 		maindiv ! [ identifier "output" ]<< (
 			p << (
 				"You can calculate a derived put function with various options:" ) +++
-			p << ( "Preprocessing steps: " +++
-			       concatHtml (map (\mode -> 
-			          radio "execMode" (show mode) 
-					! (guard (mode == execMode config) >> return checked)
-					+++ show mode +++ " "
-                                ) [Normal, Shapify, ShapifyPlus]) +++ br +++
-			       "Output mode: " +++
+			p << ( "Output mode: " +++
 			       concatHtml (map (\mode -> 
 			          radio "b18nMode" (show mode) 
 					! (guard (mode == b18nMode config) >> return checked)
@@ -285,39 +279,24 @@ jQueryMain = do
         setHeader "Cache-control" "max-age=36000000" -- 1000 h
         outputFPS $ jQueryCode
     
-defaultPlayCode Normal get =
+defaultPlayCode get =
         Just $ unlines
             [ "get = " ++ get
             , "put = " ++ get ++ "_B" 
             , ""
             , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
             ]
-defaultPlayCode Shapify get =
-        Just $ unlines
-            [ "get = " ++ get
-            , "put = " ++ get ++ "_B" 
-            , ""
-            , "source = [(),(),(),()]"
-            ]
-defaultPlayCode ShapifyPlus get =
-        Just $ unlines
-            [ "get = " ++ get
-            , "put = " ++ get ++ "_B" 
-            , ""
-            , "source = S (S (S (S Z)))"
-            ]
 
 formMain = do
         setHeader "Content-type" "application/xhtml+xml; charset=UTF-8"
 
         conf <- do
-            execMode'  <- maybe Normal read <$> getInput "execMode"
             b18nMode' <- maybe CombinedB18n read <$> getInput "b18nMode"
             isShowType' <- isJust <$> getInput "showTypes"
             return $ defaultConfig
                 { isHaskellify = True
                 , b18nMode = b18nMode'
-                , execMode = execMode'
+                , execMode = ShapifyPlus
                 , isShowType = isShowType'
                 }
 	
@@ -340,10 +319,8 @@ formMain = do
         let (genCodeM,getM) = case (todo,eAST) of
                 (Just Load, _) -> (Nothing, Nothing)
                 (Just _, Right ast) ->
-                    (  Just $ render $ case execMode conf of 
-                       Normal -> outputCode conf False ast (typeInference ast)
-                       Shapify -> outputCode conf False ast (shapify $ typeInference ast)
-                       ShapifyPlus -> outputCode conf True  ast (introNat $ shapify $ typeInference ast)
+                    (  Just $ render $
+                       outputCode conf True  ast (introNat $ shapify $ typeInference ast)
                     ,  firstDeclaredName ast
                     )
                 _ -> (Nothing, Nothing)
@@ -357,7 +334,7 @@ formMain = do
             -- The user successfully generated code to play with, insert default playCode.
             -- Do not use the user input, as he probably switched to a new example.
             (Just BiDi, Just get, Just _, _) ->
-                return (defaultPlayCode (execMode conf) get, Nothing)
+                return (defaultPlayCode get, Nothing)
             -- The user played with the code
             (Just EvalGet, Just get, Just genCode, Just pc) -> do
                 view <- liftIO $ evaluateWith genCode pc ("get source")
@@ -368,7 +345,7 @@ formMain = do
                                         $ delDefinition "result"
                                         $ pc
             (Just EvalGet, Just get, Just genCode, Nothing) -> do
-                return (defaultPlayCode (execMode conf) get, Nothing)
+                return (defaultPlayCode get, Nothing)
             (Just EvalPut, Just get, Just genCode, Just pc) -> do
                 view <- liftIO $ evaluateWith genCode pc ("put source view")
                 case view of 
@@ -377,7 +354,7 @@ formMain = do
                                         $ addDefiniton "result" dat 
                                         $ pc
             (Just EvalPut, Just get, Just _, Nothing) -> do
-                return (defaultPlayCode (execMode conf) get, Nothing)
+                return (defaultPlayCode get, Nothing)
             _ -> return (Nothing, Nothing)
 
         scrollX <- getInput "scrollx"
