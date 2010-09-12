@@ -281,14 +281,18 @@ jQueryMain = do
     
 defaultPlayCode (Config{..}) get =
         Just $ unlines
-            [ "get s = " ++ get ++ " s"
+            [ "get s = Main." ++ get ++ " s"
             , "put s v = " ++ put
             , ""
             , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
             ]
-    where put | b18nMode == SyntacticB18n = get ++ "_140_B s v"
-              | b18nMode == SemanticB18n = get ++ "_B s v"
-              | b18nMode == CombinedB18n = get ++ "_Bbd rear 42 s v"
+    where put | b18nMode == SyntacticB18n =
+                    get ++ "_140_B s v"
+              | b18nMode == SemanticB18n =
+                    get ++ "_B s v"
+              | b18nMode == CombinedB18n =
+                    "fromMaybe (error \"Could not handle shape change.\") $ " ++
+                    get ++ "_Bbd rear 42 s v"
 
 formMain = do
         setHeader "Content-type" "application/xhtml+xml; charset=UTF-8"
@@ -387,6 +391,7 @@ evaluateWith genCode playCode expr =
             ]
         imports = mods ++
             [ "Data.Maybe"
+            , "Prelude"
             ]
 
 withFullSource genCode playCode = genCode' ++ "\n" ++ playCode
