@@ -311,8 +311,8 @@ formMain = do
             map (\what -> fmap (const what) <$> getInput (submitId what))
             [ BiDi, Get, Check, Load, EvalPut, EvalGet])
         
-	code <- fromMaybe defaultCode <$> getInput "code"
-	
+	code <- filter (/= '\r') <$> fromMaybe defaultCode <$> getInput "code"
+
         code <- case todo of
             Just Load -> do loadWhat <- getInput "loadCode"
                             return $ fromMaybe code $ loadWhat >>= flip lookup examples 
