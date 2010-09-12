@@ -76,5 +76,5 @@ castError f = unsafePerformIO $
 type Bias = Int -> [ Int ]
 rear l    = [ 0 .. l - 1 ]
 front l   = reverse [ 0 .. l - 1 ]
-middle l  = [1,3..l] + (reverse [2,4..l])
-borders l = (reverse [1,3..l])+[2,4..l]
+middle l  = [1,3..l] ++ (reverse [2,4..l])
+borders l = (reverse [1,3..l])++[2,4..l]
