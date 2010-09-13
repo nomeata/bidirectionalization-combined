@@ -33,7 +33,7 @@ data PageInfo = PageInfo
     , scrollX :: Maybe String
     , scrollY :: Maybe String
     , viewFunction :: String
-    , parseError :: Maybe String
+    , astError :: Maybe String
     , generatedModuleMB :: Maybe String
     , showCode :: Bool
     , playCodeMB :: Maybe String
@@ -107,10 +107,10 @@ page (PageInfo {..}) =
 			) 
 			
 		) +++
-                ( htmlMB parseError $ \err -> 
+                ( htmlMB astError $ \err -> 
                      maindiv << p << (
-                        "Can not parse your definition:" +++ br +++
-                        pre << show err +++ br +++
+                        "There was an error with the view function:" +++ br +++
+                        pre << err +++ br +++
                         mkSubmit True Check)
                 ) +++
 		-- p << astInfo mbAST +++
@@ -316,7 +316,7 @@ formMain = do
         let eAST = parseString code
 
 
-        let parseError = either (Just . show) (const Nothing) eAST
+        let astError = either (Just . show) checkBidirectionalizability eAST
 
         let (genCodeM,getM) = case (todo,eAST) of
                 (Just Load, _) -> (Nothing, Nothing)
@@ -367,7 +367,7 @@ formMain = do
                      scrollX
                      scrollY
                      code
-                     parseError
+                     astError
                      genCodeM
                      showCode
                      playCode
