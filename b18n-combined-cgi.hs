@@ -122,7 +122,7 @@ page (PageInfo {..}) =
 			          radio "b18nMode" (show mode) 
 					! (guard (mode == b18nMode config) >> return checked)
 					+++ show mode +++ " "
-                                ) [SyntacticB18n, SemanticB18n, CombinedB18n, NoB18n]) +++ br +++
+                                ) [SyntacticB18n, SemanticB18n, CombinedB18n]) +++ br +++
 			       mkSubmit True BiDi
 			) +++
                         ( htmlMB generatedModuleMB $ \ generatedModule -> 
