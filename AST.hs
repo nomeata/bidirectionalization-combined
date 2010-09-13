@@ -4,14 +4,15 @@ import Util
 import Text.PrettyPrint
 import Data.List (groupBy)
 
+import Debug.Trace 
 import Control.Monad.State
 
 data AST = AST [ Decl ]
 
 instance Ppr AST where
     ppr (AST ds) = 
-        let dss = groupBy (\(Decl f _ _ _) (Decl g _ _ _) -> f == g) ds
-        in vcat $ map pprDecls dss 
+        let dss = groupBy isSameFunc ds
+        in vcat $ punctuate (text "\n") $ map pprDecls dss 
         where 
           pprDecls (d:ds) =
               ppr d $$ pprDeclsSimp ds 
@@ -56,8 +57,9 @@ data Decl = Decl Name FType [Pat] Exp
 
 instance Ppr Decl where
     ppr (Decl fname ftype ps e) = 
-        addSig (ppr fname <> 
-                     parens (hsep $ punctuate comma (map ppr ps)) $$
+        addSig (ppr fname <+> 
+                    (hsep $ map pprChildP ps) $$
+--                     parens (hsep $ punctuate comma (map ppr ps)) $$
                      nest 4 (text "=") $$
                      nest 6 (ppr e))
         where 
@@ -78,21 +80,53 @@ type ID = Maybe Int
 addPprType t d = 
     case t of 
       TUndet -> d
-      _      -> d <> text "::" <> ppr t 
+      _      -> parens ( d <> text "::" <> ppr t )
+
+
+pprChildE e | isAtomicE e = ppr e 
+            | otherwise   = parens (ppr e)
+isAtomicE (EVar _ _ _)     = True
+isAtomicE (EFun _ _ _ [])  = True
+isAtomicE (ECon _ _ _ [])  = True
+isAtomicE e | isAllListE e = True 
+isAtomicE _                = False
+
+pprListE (ECon _ _ (Name "Cons") [e1,ECon _ _ (Name "Nil") []]) 
+    = ppr e1 
+pprListE (ECon _ _ (Name "Cons") [e1,e2]) 
+    = ppr e1 <> comma <+> pprListE e2 
+pprListE (ECon _ _ (Name "Nil") []) 
+    = empty
+
+isAllListE (ECon _ _ (Name "Cons") [e1,e2])
+    = isAllListE e2 
+isAllListE (ECon _ _ (Name "Nil") []) 
+    = True
+isAllListE _ 
+    = False 
 
 instance Ppr Exp where
     ppr (EVar _ t vname)     
         = addPprType t (ppr vname)
     ppr (EFun _ t fname es) 
         = addPprType t $
-            ppr fname <>
-            parens (sep $ punctuate comma (map ppr es))          
+            ppr fname <+>
+                (hsep $ map pprChildE es)
+--            parens (sep $ punctuate comma (map ppr es))          
+    ppr e | isAllListE e
+        = brackets (pprListE e )
+    ppr (ECon _ _ (Name "Cons") [e1,e2]) 
+        = pprChildE e1 <> text ":" <> ppr e2 
+    ppr (ECon _ _ (Name "Unit") []) 
+        = parens empty 
     ppr (ECon _ t cname []) 
         = addPprType t $ ppr cname 
     ppr (ECon _ t cname es)
         = addPprType t $ 
-             ppr cname <>
-             parens (sep $ punctuate comma (map ppr es))
+             ppr cname <+>
+                 (hsep $ map pprChildE es)
+--             parens (sep $ punctuate comma (map ppr es))
+
 
 instance Show Exp where
     show = show . ppr 
@@ -101,14 +135,44 @@ data Pat  = PVar ID Type Name
           | PCon ID Type Name [Pat] 
        deriving (Ord,Eq)
 
+
+pprChildP p | isAtomicP p = ppr p
+            | otherwise   = parens (ppr p)
+isAtomicP (PVar _ _ _)     = True
+isAtomicP (PCon _ _ _ [])  = True
+isAtomicP p | isAllListP p = True
+isAtomicP _                = False
+
+pprListP (PCon _ _ (Name "Cons") [p1, PCon _ _ (Name "Nil") []])
+    = ppr p1
+pprListP (PCon _ _ (Name "Cons") [p1,p2]) 
+    = ppr p1 <> comma <+> pprListP p2 
+pprListP (PCon _ _ (Name "Nil") []) 
+    = empty
+
+isAllListP (PCon _ _ (Name "Cons") [p1,p2])
+    = isAllListP p2 
+isAllListP (PCon _ _ (Name "Nil") []) 
+    = True
+isAllListP _ 
+    = False 
+
+
 instance Ppr Pat where
     ppr (PVar _ t vname)     
         = addPprType t (ppr vname)
+    ppr e | isAllListP e
+        = brackets (pprListP e )
+    ppr (PCon _ _ (Name "Cons") [p1,p2]) 
+        = pprChildP p1 <> text ":" <> ppr p2 
+    ppr (PCon _ _ (Name "Unit") []) -- never happens 
+        = parens empty 
     ppr (PCon _ t cname [])
         = addPprType t (ppr cname)
     ppr (PCon _ t cname ps)
         = addPprType t $ ppr cname 
-          <> parens (sep $ punctuate comma (map ppr ps))
+           <+> (hsep $ map pprChildP ps)
+--           <> parens (sep $ punctuate comma (map ppr ps))
           
 instance Show Pat where
     show = show . ppr 
@@ -151,6 +215,10 @@ data Type = TUndet           -- PlaceHolder
 instance Ppr Type where
     ppr (TUndet)        = text "?"
     ppr (TVar i)        = text ("t" ++ show i) 
+    ppr (TCon (Name "Unit") []) =
+        parens empty 
+    ppr (TCon (Name "List") [t]) = 
+        brackets $ ppr t
     ppr (TCon tname ts) =
         ppr tname <+> 
              hsep (map (\t -> f t (ppr t)) ts)
@@ -226,18 +294,26 @@ data TAST  = TAST [TDecl]
 data TDecl = TDecl Name [Pat] [Exp] [VDecl] -- f(ps) = es where ... 
 data VDecl = VDecl [Name] Name [Name]          -- vs = f(us)
 
+parensIfMultiple []  = parens empty 
+parensIfMultiple [p] = p
+parensIfMultiple ps  = parens (hsep $ punctuate comma ps)
+
 instance Ppr TAST where 
-    ppr (TAST tdecls) = vcat $ map ppr tdecls 
+    ppr (TAST tdecls) = 
+        let tdeclss = groupBy (\(TDecl f _ _ _) (TDecl g _ _ _) -> f == g) tdecls 
+        in vcat $ punctuate (text "\n") $ map (\tdecls -> vcat $ map ppr tdecls) tdeclss
+
+
 instance Ppr TDecl where
     ppr (TDecl f ps es vdecls) =
-        ppr f <> parens (hsep $ punctuate comma (map ppr ps)) $$
-            nest 4 (text "=" <+> parens (hsep $ punctuate comma (map ppr es))) $$
+        ppr f <+> parensIfMultiple (map ppr ps) $$
+            nest 4 (text "=" <+> parensIfMultiple (map ppr es)) $$
             if null vdecls then 
                 empty 
             else 
                 (nest 6 (text "where") $$
                  nest 8 (vcat $ map ppr vdecls))
 instance Ppr VDecl where
-    ppr (VDecl vs f us) = parens (hsep $ punctuate comma (map ppr vs))
+    ppr (VDecl vs f us) = parensIfMultiple (map ppr vs)
                           <+> text "=" <+> ppr f <>
-                          parens (hsep $ punctuate comma (map ppr us))
+                          parensIfMultiple (map ppr us)

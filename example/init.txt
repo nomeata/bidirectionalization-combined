@@ -1,5 +1,5 @@
-init (Nil)         = Nil
-init (Cons(a,Nil)) = Nil
-init (Cons(a,Cons(b,x))) = Cons(a,initWork(b,x))
-initWork(a,Nil)       = Nil
-initWork(a,Cons(b,x)) = Cons(a,initWork(b,x))
+init []          = []
+init [a]         = []
+init (a:b:x)     = a:initWork b x
+initWork a []    = []
+initWork a (b:x) = a:initWork b x

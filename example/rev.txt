@@ -1,3 +1,3 @@
-reverse(xs) = rev(xs,Nil)
-rev(Nil,y)       = y
-rev(Cons(a,x),y) = rev(x,Cons(a,y))
+reverse xs = rev xs []
+rev [] y    = y 
+rev (a:x) y = rev x (a:y) 

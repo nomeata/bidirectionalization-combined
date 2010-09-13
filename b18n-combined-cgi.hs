@@ -183,30 +183,30 @@ maindiv = thediv ! [theclass "main"]
         
 examples =
 	[ ("init", unlines
-		[ "init (Nil)         = Nil"
-		, "init (Cons(a,Nil)) = Nil"
-		, "init (Cons(a,Cons(b,x))) = Cons(a,initWork(b,x))"
-		, "initWork(a,Nil)       = Nil"
-		, "initWork(a,Cons(b,x)) = Cons(a,initWork(b,x))"
+		[ "init []      = []"
+		, "init [a]     = []"
+		, "init (a:b:x) = a:initWork b x"
+		, "initWork a []    = []"
+		, "initWork a (b:x) = a:initWork b x"
 		])
 	, ("initHalf", unlines
-		[ "initHalf(Nil)       = Nil"
-		, "initHalf(Cons(a,x)) = Cons(a,initHalfWork(x,x))"
+		[ "initHalf []    = []"
+		, "initHalf (a:x) = a:initHalfWork x x"
 		, ""
-		, "initHalfWork(xs, Nil)         = Nil"
-		, "initHalfWork(xs, Cons(x,Nil)) = Nil"
-		, "initHalfWork(Cons(a,x), Cons(b,Cons(c,y)))"
-		, "                    = Cons(a,initHalfWork(x,y))"
+		, "initHalfWork xs  []  = []"
+		, "initHalfWork xs  [x] = []"
+		, "initHalfWork (a:x) (b:c:y)"
+		, "                    = a:initHalfWork x y"
 		])
 	, ("sieve", unlines
-		[ "sieve (Nil)               = Nil"
-		, "sieve (Cons(a,Nil))       = Nil"
-		, "sieve (Cons(a,Cons(b,x))) = Cons(b,sieve(x))"
+		[ "sieve []      = []"
+		, "sieve [a]     = []"
+		, "sieve (a:b:x) = b:sieve x"
 		])
 	, ("rev", unlines
-		[ "reverse(xs) = rev(xs,Nil)"
-		, "rev(Nil,y)       = y"
-		, "rev(Cons(a,x),y) = rev(x,Cons(a,y))"
+		[ "reverse xs = rev xs []"
+		, "rev []    y = y"
+		, "rev (a:x) y = rev x (a:y)"
 		])
 	]
 

@@ -94,7 +94,14 @@ outputCode conf_ isShapify orig ast =
                       , ppr $ generateCodeBwd (orig, p1, p2, p3) ]
              else 
                  vcat [ ppr (constructTypeDecl p2)
-                      , ppr orig $$ ppr (typeFilter p1) $$ ppr (typeFilter p2) $$ ppr (typeFilterT p3) ]
+                      , space
+                      , ppr orig
+                      , space
+                      , ppr (typeFilter p1) 
+                      , space 
+                      , ppr (typeFilter p2)
+                      , space 
+                      , ppr (typeFilterT p3) ]
          SemanticB18n -> vcat $ 
              [ text "import Data.Bff" ] ++
              [ text "import BUtil" ] ++ 

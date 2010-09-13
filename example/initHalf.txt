@@ -1,7 +1,17 @@
-initHalf(Nil)       = Nil
-initHalf(Cons(a,x)) = Cons(a,initHalfWork(x,x))
+--  This program requires further preprocessing 
+--  to get effective "put" function.
+--
+--  However, "shap"ication makes the preprocess easier.
+--
+--  After the shapificatoin, 
+--  we can easily observe that the first parameter 
+--  of initHalfWork is useless.	  
 
-initHalfWork(xs, Nil)         = Nil
-initHalfWork(xs, Cons(x,Nil)) = Nil
-initHalfWork(Cons(a,x), Cons(b,Cons(c,y)))
-    = Cons(a,initHalfWork(x,y))
+initHalf []     = []
+initHalf (a:x)  = a:initHalfWork x x
+
+initHalfWork xs []  = []
+initHalfWork xs [x] = []
+initHalfWork (a:x) (b:c:y)
+    = a:initHalfWork x y
+
