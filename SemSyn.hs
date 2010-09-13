@@ -172,22 +172,52 @@ outputCode conf_ isShapify orig ast =
                 empty
                                   
 
-
-checkTreeless :: AST -> Bool
-checkTreeless (AST decls) = all checkTreelessD decls
+checkBidirectionalizability :: AST -> AST 
+checkBidirectionalizability ast = 
+    case (checkTreeless $ eraseType ast, checkAffine $ eraseType ast)  of 
+      (Nothing, Nothing) -> ast
+      (Just (e,d),Nothing)       -> error $ showTreelessError (e,d) 
+      (Nothing, Just (vs,d'))    -> error $ showAffineError   (vs,d')
+      (Just (e,d), Just (vs,d')) -> error $ showTreelessError (e,d) ++ "\n" ++ showAffineError (vs,d') 
     where
-      checkTreelessD (Decl _ _ _ e) = checkTreelessE e
-      checkTreelessE (EVar _ _ _)    = True
-      checkTreelessE (ECon _ _ _ es) = all checkTreelessE es
-      checkTreelessE (EFun _ _ _ es) = all isVariable es
-      isVariable (EVar _ _ _) = True
-      isVariable _            = False
+      showTreelessError (e,d)
+          = show $ (text "Error: program is not treeless due to expression" $$
+                         nest 4 (ppr e) $$
+                         text "in declaration" $$ 
+                         nest 4 (ppr d))
+      showAffineError (vs,d)
+          = show $ (text "Error: program is not affine due to variables" $$
+                         nest 4 (ppr vs) $$
+                         text "in declaration" $$ 
+                         nest 4 (ppr d))
+      
+                                                         
+                                                        
 
-checkAffine :: AST -> Bool 
-checkAffine (AST decls) = all checkAffineD decls
+-- msum []     = mzero
+-- msum (m:ms) = mplus m (msum ms)
+
+-- Nothing    : treeless
+-- Just (e,d) : not treeless because of d 
+checkTreeless :: AST -> Maybe (Exp, Decl)
+checkTreeless (AST decls) = msum $ map checkTreelessD decls
     where
-      checkAffineD (Decl _ _ _ e) = checkAffineE e 
-      checkAffineE e = (varsE e == snub (varsE e))
+      checkTreelessD (d@(Decl _ _ _ e))  = checkTreelessE d e 
+      checkTreelessE d (EVar _ _ _)      = Nothing 
+      checkTreelessE d (ECon _ _ _ es)   = msum $ map (checkTreelessE d) es
+      checkTreelessE d (e@(EFun _ _ _ es)) | all isVariable es = Nothing 
+                                           | otherwise         = Just (e,d)       
+      isVariable (EVar _ _ _) = True 
+      isVariable e            = False
+
+-- Nothing    : treeless
+-- Just (e,d) : not treeless because of d 
+checkAffine :: AST -> Maybe ([Name],Decl)
+checkAffine (AST decls) = msum $ map checkAffineD decls
+    where
+      checkAffineD (d@(Decl _ _ _ e)) = checkAffineE d e 
+      checkAffineE d e | (sort (varsE e) == snub (varsE e)) = Nothing
+                       | otherwise                          = Just (sort (varsE e) \\ snub (varsE e),d)
       varsE (EVar _ _ v) = [v]
       varsE (ECon _ _ _ es) = concatMap varsE es
       varsE (EFun _ _ _ es) = concatMap varsE es
