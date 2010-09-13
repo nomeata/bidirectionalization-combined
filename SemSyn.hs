@@ -172,13 +172,13 @@ outputCode conf_ isShapify orig ast =
                 empty
                                   
 
-checkBidirectionalizability :: AST -> AST 
+checkBidirectionalizability :: AST -> Maybe String 
 checkBidirectionalizability ast = 
     case (checkTreeless $ eraseType ast, checkAffine $ eraseType ast)  of 
-      (Nothing, Nothing) -> ast
-      (Just (e,d),Nothing)       -> error $ showTreelessError (e,d) 
-      (Nothing, Just (vs,d'))    -> error $ showAffineError   (vs,d')
-      (Just (e,d), Just (vs,d')) -> error $ showTreelessError (e,d) ++ "\n" ++ showAffineError (vs,d') 
+      (Nothing, Nothing) -> Nothing
+      (Just (e,d),Nothing)       -> Just $ showTreelessError (e,d) 
+      (Nothing, Just (vs,d'))    -> Just $ showAffineError   (vs,d')
+      (Just (e,d), Just (vs,d')) -> Just $ showTreelessError (e,d) ++ "\n" ++ showAffineError (vs,d') 
     where
       showTreelessError (e,d)
           = show $ (text "Error: program is not treeless due to expression" $$
