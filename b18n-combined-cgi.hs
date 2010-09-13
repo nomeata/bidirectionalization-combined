@@ -65,7 +65,7 @@ page (PageInfo {..}) =
                       "Zhenjiang Hu, " +++
                       "Keisuke Nakano, " +++
                       "Makoto Hamana and " +++
-                      "Gunma University"
+                      "Masato Takeichi."
                     ) +++
                     li << (
                       "“" +++
