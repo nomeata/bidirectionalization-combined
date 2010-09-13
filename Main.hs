@@ -68,9 +68,9 @@ options =
              (text "Specify program's input file")
              (UnaryAction (\x conf -> 
                                conf { inputFile = Just x })),
---       Option "-s" (Just "--shapify") (empty)
---              (text "Convert terms with type \"T a\" to \"T Unit\".")
---              (NullaryAction (\conf -> conf {execMode = Shapify})),
+      Option "-s" (Just "--shapify") (empty)
+             (text "Convert terms with type \"T a\" to \"T Unit\".")
+             (NullaryAction (\conf -> conf {execMode = Shapify})),
       Option "-n" (Just "--natify") empty
              (text "Convert terms with \"List a\" to \"Nat\".")
              (NullaryAction (\conf -> conf {execMode = ShapifyPlus})),
@@ -215,6 +215,21 @@ usage = show $
                 lnextSpace (' ':_) = 0
                 lnextSpace (c:s)   = 1 + lnextSpace s 
 
+isNormalMode conf =
+    ( b18nMode conf == SemanticB18n ) 
+    || ( (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n)
+         && (execMode conf == Normal) )
+    
+
+isShapifyMode conf = 
+    (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n)
+    && (execMode conf == Shapify)
+
+isShapifyPlusMode conf =
+    (b18nMode conf == CombinedB18n) 
+    || ( (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n)
+         && (execMode conf == ShapifyPlus) )
+
 main :: IO ()
 main = do { args <- getArgs 
           ; let conf = adjustConfig $ parseArgs args defaultConfig
@@ -231,15 +246,15 @@ main = do { args <- getArgs
                          Left err -> hPutStrLn stderr (show err)
                          Right cprog -> 
                              case execMode conf of 
-                               Normal | (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n) -> 
-                                   print $
-                                         outputCode conf False (cprog) (typeInference cprog)
---                                Shapify -> print $
---                                    outputCode conf False (cprog) (shapify $ typeInference cprog)
---                                    -- putStrLn "Not Supported Now."
-                               ShapifyPlus -> 
-                                   print $
-                                         outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
+--                                Normal | (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n) -> 
+--                                    print $
+--                                          outputCode conf False (cprog) (typeInference cprog)
+-- --                                Shapify -> print $
+-- --                                    outputCode conf False (cprog) (shapify $ typeInference cprog)
+-- --                                    -- putStrLn "Not Supported Now."
+--                                ShapifyPlus -> 
+--                                    print $
+--                                          outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
                                Debug ->
                                    do { print $ ppr   $ cprog
                                       -- ; print $ pprAM $ constructAutomaton (typeInference cprog) initTAMap
@@ -256,6 +271,12 @@ main = do { args <- getArgs
                                       ; print $ ppr p1 $$ ppr p2 $$ ppr p3
                                       ; putStrLn ""
                                       }
+                               _ | isNormalMode conf ->
+                                     print $ outputCode conf False (cprog) (typeInference cprog)
+                               _ | isShapifyMode conf -> 
+                                     print $ outputCode conf False (cprog) (shapify $ typeInference cprog)
+                               _ | isShapifyPlusMode conf -> 
+                                     print $ outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
                                _ ->
                                    print $ outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
                      }
