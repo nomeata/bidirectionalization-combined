@@ -123,9 +123,6 @@ page (PageInfo {..}) =
 					! (guard (mode == b18nMode config) >> return checked)
 					+++ show mode +++ " "
                                 ) [SyntacticB18n, SemanticB18n, CombinedB18n, NoB18n]) +++ br +++
-			       "Show types " +++ checkbox "showTypes" "showTypes"
-                                        ! (guard (isShowType config) >> return checked)
-                                        +++ br +++
 			       mkSubmit True BiDi
 			) +++
                         ( htmlMB generatedModuleMB $ \ generatedModule -> 
@@ -299,12 +296,10 @@ formMain = do
 
         conf <- do
             b18nMode' <- maybe CombinedB18n read <$> getInput "b18nMode"
-            isShowType' <- isJust <$> getInput "showTypes"
             return $ defaultConfig
                 { isHaskellify = True
                 , b18nMode = b18nMode'
                 , execMode = ShapifyPlus
-                , isShowType = isShowType'
                 }
 	
 	todo <- msum <$> sequence (
