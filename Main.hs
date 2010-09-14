@@ -182,17 +182,17 @@ progName = unsafePerformIO getProgName
 usage = show $ 
     text "USAGE" $$
     text "-----" $$
-         nest 4 (text $ progName ++ " (-n|-s) (-T|-U) (-P|-H|-F) [-f] [FILENAME]\n") $+$ 
+         nest 4 (text $ progName ++ " (-n|-s) (-T|-U) (-no|-sem|-syn|-comb) [-hs] [-f] [FILENAME]\n") $+$ 
                   
          text ("This program is a prototype implementation of the paper:\n") $$
          nest 4 (sep [text "Janis Voigtlander, Zhenjiang Hu, Kazutaka Matsuda and Meng Wang:",
                        text "Combining Syntactic and Semantic Bidirectionalization.",
                        text "ICFP 2010.\n"])
          $$
-         wrap 80 ( "Given a \"get\" function defined in a file specified by FILENAME,"
+         wrap 80 ( "Given a \"get\" function defined in a file specified by FILENAME, "
                   ++ "the program returns \"put\" function by combining "
                   ++ "semantic bidirectionalization (Janis Voiglander: POPL'09) "
-                  ++ "and syntatic bidirectionalization (Kazutaka Matsuda et al.: ICFP'07). A typical usage is \""++ progName ++ " -H FILENAME\", which correspondes to the paper.\n"
+                  ++ "and syntatic bidirectionalization (Kazutaka Matsuda et al.: ICFP'07). A typical usage is \""++ progName ++ " FILENAME\", which correspondes to the paper.\n"
                   ) $+$
     text "OPTIONS" $$
     text "-------" $$
@@ -241,21 +241,22 @@ main = do { args <- getArgs
 --                                    print $
 --                                          outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
                                Debug ->
-                                   do { print $ ppr   $ cprog
-                                      -- ; print $ pprAM $ constructAutomaton (typeInference cprog) initTAMap
-                                      ; let (p1,p2,p3) = constructBwdFunction (typeInference cprog)
-                                      ; print $ ppr p1 $$ ppr p2 $$ ppr p3
-                                      ; print $ ppr $ constructTypeDecl p2 
-                                      ; print $ ppr $ generateCodeBwd (typeInference cprog, p1,p2,p3)
-                                      ; putStrLn ""
-                                      ; putStrLn $ "---- After \"Shapify\" ----" 
-                                      ; let cprog' = introNat $ shapify $ typeInference cprog 
-                                      -- ; print $ pprAM $ constructAutomaton cprog' initTAMap
-                                      ; print $ cprog'                                       
-                                      ; let (p1,p2,p3) = constructBwdFunction cprog' 
-                                      ; print $ ppr p1 $$ ppr p2 $$ ppr p3
-                                      ; putStrLn ""
-                                      }
+                                   putStrLn "Debug mode does nothing."
+--                                    do { print $ ppr   $ cprog
+--                                       -- ; print $ pprAM $ constructAutomaton (typeInference cprog) initTAMap
+--                                       ; let (p1,p2,p3) = constructBwdFunction (typeInference cprog)
+--                                       ; print $ ppr p1 $$ ppr p2 $$ ppr p3
+--                                       ; print $ ppr $ constructTypeDecl p2 
+--                                       ; print $ ppr $ generateCodeBwd (typeInference cprog, p1,p2,p3)
+--                                       ; putStrLn ""
+--                                       ; putStrLn $ "---- After \"Shapify\" ----" 
+--                                       ; let cprog' = introNat $ shapify $ typeInference cprog 
+--                                       -- ; print $ pprAM $ constructAutomaton cprog' initTAMap
+--                                       ; print $ cprog'                                       
+--                                       ; let (p1,p2,p3) = constructBwdFunction cprog' 
+--                                       ; print $ ppr p1 $$ ppr p2 $$ ppr p3
+--                                       ; putStrLn ""
+--                                       }
                                _ -> print $ renderCode conf cprog
                      }
           }
