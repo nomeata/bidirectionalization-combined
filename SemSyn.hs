@@ -107,8 +107,8 @@ outputCode conf_ isShapify orig ast =
              [ text "import BUtil" ] ++ 
              (map genBwdDefBff $ 
                    let AST decls = typeInference orig 
-                   in map (\(Decl f t _ _:_) -> f) $ groupBy isSameFunc decls) ++
-             [ ppr $ generateCodeDet p1 ]             
+                   in map (\(Decl f t _ _:_) -> (f,t)) $ groupBy isSameFunc decls) ++
+             [ ppr $ generateCodeDet orig ]             
          CombinedB18n -> vcat $ 
              [ text "import Control.Monad"
              , text "import BUtil"
@@ -147,13 +147,17 @@ outputCode conf_ isShapify orig ast =
       conf       = adjustConfig conf_
       typeFilter  = if isShowType conf then id else eraseType
       typeFilterT = if isShowType conf then id else eraseTypeT
-      genBwdDefBff (Name fName) =
-          ppr (Name fName) <> text "_B" $$
-              nest 4 (text "= bff Main." <> ppr (Name fName)) $$
-          ppr (Name fName) <> text "_B_Eq" $$
-              nest 4 (text "= bff_Eq Main." <> ppr (Name fName)) $$
-          ppr (Name fName) <> text "_B_Ord" $$
-              nest 4 (text "= bff_Ord Main." <> ppr (Name fName))  
+      genBwdDefBff (Name fName,(TFun is ts t)) =
+          case (ts,t) of 
+            ([TCon (Name "List") [TVar i]],TCon (Name "List") [TVar j]) | i == j  ->
+                ppr (Name fName) <> text "_B" $$
+                    nest 4 (text "= bff Main." <> ppr (Name fName)) 
+            _ ->
+                empty 
+--           ppr (Name fName) <> text "_B_Eq" $$
+--               nest 4 (text "= bff_Eq Main." <> ppr (Name fName)) $$
+--           ppr (Name fName) <> text "_B_Ord" $$
+--               nest 4 (text "= bff_Ord Main." <> ppr (Name fName))  
       genBwdDef (Name fName,(TFun is ts t)) =
           case (ts,t) of 
             ([TCon (Name "List") [TVar i]],TCon (Name "List") [TVar j]) | i == j  ->
