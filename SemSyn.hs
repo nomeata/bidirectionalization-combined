@@ -220,7 +220,7 @@ checkBidirectionalizability ast =
 -- msum (m:ms) = mplus m (msum ms)
 
 -- Nothing    : treeless
--- Just (e,d) : not treeless because of d 
+-- Just (e,d) : not treeless because of e in d 
 checkTreeless :: AST -> Maybe (Exp, Decl)
 checkTreeless (AST decls) = msum $ map checkTreelessD decls
     where
@@ -232,8 +232,8 @@ checkTreeless (AST decls) = msum $ map checkTreelessD decls
       isVariable (EVar _ _ _) = True 
       isVariable e            = False
 
--- Nothing    : treeless
--- Just (e,d) : not treeless because of d 
+-- Nothing     : affine
+-- Just (vs,d) : not affine because of vs in d 
 checkAffine :: AST -> Maybe ([Name],Decl)
 checkAffine (AST decls) = msum $ map checkAffineD decls
     where

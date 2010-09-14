@@ -257,7 +257,21 @@ main = do { args <- getArgs
 --                                       ; print $ ppr p1 $$ ppr p2 $$ ppr p3
 --                                       ; putStrLn ""
 --                                       }
-                               _ -> print $ renderCode conf cprog
+                               _ | isNormalMode conf ->
+                                     print $ outputCode conf False (cprog) (typeInference cprog)
+                               _ | isShapifyMode conf -> 
+                                     print $ outputCode conf False (cprog) (shapify $ typeInference cprog)
+                               _ | isShapifyPlusMode conf -> 
+                                     print $ outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
+                               _ ->
+                                   print $ outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
                      }
           }
+              where checkAndDoBidirectionalize conf isShapify orig ast =
+                        if b18nMode conf == NoB18n || b18nMode conf == SemanticB18n then 
+                            (print $ outputCode conf isShapify orig ast)
+                        else
+                            maybe (print $ outputCode conf isShapify orig ast)
+                                  putStrLn 
+                                  (checkBidirectionalizability ast)
 
