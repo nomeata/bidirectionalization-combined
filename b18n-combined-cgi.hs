@@ -144,7 +144,7 @@ page (PageInfo {..}) =
                             tt << "view" +++ ", or modify the " +++
                             tt << "view" +++ " and calculate an updated "+++
                             tt << "source" +++ "." +++ br +++
-                            textarea ! [name "playCode", cols "120", rows "8" ] << playCode
+                            textarea ! [name "playCode", cols "120", rows "12" ] << playCode
                     ) +++
                     p << ( "Evaluate " +++
                            mkSubmit True EvalGet +++ " " +++
@@ -276,19 +276,30 @@ jQueryMain = do
         setHeader "Cache-control" "max-age=36000000" -- 1000 h
         outputFPS $ jQueryCode
     
-defaultPlayCode (Config{..}) get =
+defaultPlayCode (Config{ b18nMode = SyntacticB18n}) get =
         Just $ unlines
             [ "get s = Main." ++ get ++ " s"
-            , "put s v = " ++ put
+            , "put s v = " ++ get ++ "_B s v"
             , ""
             , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
             ]
-    where put = case b18nMode of
-            SyntacticB18n -> get ++ "_B s v"
-            SemanticB18n -> get ++ "_B s v"
-            CombinedB18n ->
-                "fromMaybe (error \"Could not handle shape change.\") $ " ++
-                 get ++ "_Bbd rear 42 s v"
+defaultPlayCode (Config{ b18nMode = SemanticB18n}) get =
+        Just $ unlines
+            [ "get s = Main." ++ get ++ " s"
+            , "put s v = " ++ get ++ "_B s v"
+            , ""
+            , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+            ]
+defaultPlayCode (Config{ b18nMode = CombinedB18n}) get =
+        Just $ unlines
+            [ "get s = Main." ++ get ++ " s"
+            , "put s v = fromMaybe (error \"Could not handle shape change.\") $ " ++
+                 get ++ "_Bbd bias default_value s v"
+            , "bias = rear"
+            , "default_value = 42"
+            , ""
+            , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+            ]
 
 formMain = do
         setHeader "Content-type" "application/xhtml+xml; charset=UTF-8"
