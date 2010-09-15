@@ -258,13 +258,14 @@ main = do { args <- getArgs
 --                                       ; putStrLn ""
 --                                       }
                                _ | isNormalMode conf ->
-                                     print $ outputCode conf False (cprog) (typeInference cprog)
+                                     let transformed = typeInference cprog 
+                                     in checkAndDoBidirectionalize conf False cprog transformed
                                _ | isShapifyMode conf -> 
-                                     print $ outputCode conf False (cprog) (shapify $ typeInference cprog)
-                               _ | isShapifyPlusMode conf -> 
-                                     print $ outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
-                               _ ->
-                                   print $ outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
+                                     let transformed = shapify $ typeInference cprog 
+                                     in checkAndDoBidirectionalize conf False cprog transformed
+                               _ | isShapifyPlusMode conf || True -> 
+                                     let transformed = introNat $ shapify $ typeInference cprog
+                                     in checkAndDoBidirectionalize conf True cprog transformed 
                      }
           }
               where checkAndDoBidirectionalize conf isShapify orig ast =
