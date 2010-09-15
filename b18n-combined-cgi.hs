@@ -98,7 +98,8 @@ page (PageInfo {..}) =
                 hidden "showCode" (show showCode) +++
 		maindiv << (
 			 p << (
-				"Please enter the view function. (TODO: Elaborate this text)"
+				"Please enter the view function. The first function "+++
+                                "defined will be assumed to be your view function."
 			) +++
 
 			p << (
