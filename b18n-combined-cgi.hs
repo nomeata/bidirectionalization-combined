@@ -284,7 +284,7 @@ defaultPlayCode (Config{..}) get =
             , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
             ]
     where put = case b18nMode of
-            SyntacticB18n -> get ++ "_140_B s v"
+            SyntacticB18n -> get ++ "_B s v"
             SemanticB18n -> get ++ "_B s v"
             CombinedB18n ->
                 "fromMaybe (error \"Could not handle shape change.\") $ " ++
@@ -295,10 +295,9 @@ formMain = do
 
         conf <- do
             b18nMode' <- maybe CombinedB18n read <$> getInput "b18nMode"
-            return $ defaultConfig
+            return $ adjustConfig $ defaultConfig
                 { isHaskellify = True
                 , b18nMode = b18nMode'
-                , execMode = ShapifyPlus
                 }
 	
 	todo <- msum <$> sequence (
