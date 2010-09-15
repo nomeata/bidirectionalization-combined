@@ -113,14 +113,15 @@ page (PageInfo {..}) =
 			) 
 			
 		) +++
-                ( htmlMB astError $ \err -> 
+                ( case astError of 
+                  Just err -> 
                      maindiv << p << (
                         "There was an error with the view function:" +++ br +++
                         pre << err +++ br +++
-                        mkSubmit True Check)
-                ) +++
-		-- p << astInfo mbAST +++
-		maindiv ! [ identifier "output" ]<< (
+                        mkSubmit True Check
+                     )
+		  Nothing -> 
+                     maindiv ! [ identifier "output" ]<< (
 			p << ( "You can try all three bidirectionalization methods." ) +++
 			p << (  concatHtml (map (\mode -> 
 			          radio "b18nMode" (show mode) 
@@ -141,6 +142,7 @@ page (PageInfo {..}) =
                             )
 
                         )
+                     )
 		) +++
                 ( htmlMB playCodeMB $ \playCode -> maindiv << ( 
                     p << (  "You can now play with the code. You can modify the " +++
