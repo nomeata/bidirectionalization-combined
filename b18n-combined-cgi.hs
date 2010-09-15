@@ -59,7 +59,7 @@ page (PageInfo {..}) =
                       "“" +++
 		      hotlink "http://doi.acm.org/10.1145/1291151.1291162"
                         << "Bidirectionalization transformation based on automatic derivation of view complement functions" +++
-		      "” (ICFP'07) by " +++
+		      "” (ICFP’07) by " +++
 		      hotlink "http://www.kb.ecei.tohoku.ac.jp/~kztk/"
                         << "Kazutaka Matsuda" +++ ", " +++
                       "Zhenjiang Hu, " +++
@@ -71,7 +71,7 @@ page (PageInfo {..}) =
                       "“" +++
 		      hotlink "http://doi.acm.org/10.1145/1480881.1480904"
                         << "Bidirectionalization for free! (Pearl)" +++
-		      "” (POPL'09) by " +++
+		      "” (POPL’09) by " +++
 		      hotlink "http://www.iai.uni-bonn.de/~jv/"
                         << "Janis Voigtländer"
                     ) +++
@@ -79,7 +79,7 @@ page (PageInfo {..}) =
                       "“" +++
 		      hotlink "http://www.iai.uni-bonn.de/~jv/icfp10.pdf"
                         << "Combining Syntactic and Semantic Bidirectionalization" +++
-		      "” (ICFP'10) by " +++
+		      "” (ICFP’10) by " +++
 		      hotlink "http://www.iai.uni-bonn.de/~jv/"
                         << "Janis Voigtländer" +++ ", " +++
                       "Zhenjiang Hu, " +++
@@ -121,14 +121,12 @@ page (PageInfo {..}) =
                 ) +++
 		-- p << astInfo mbAST +++
 		maindiv ! [ identifier "output" ]<< (
-			p << (
-				"You can calculate a derived put function with various options:" ) +++
-			p << ( "Output mode: " +++
-			       concatHtml (map (\mode -> 
+			p << ( "You can try all three bidirectionalization methods." ) +++
+			p << (  concatHtml (map (\mode -> 
 			          radio "b18nMode" (show mode) 
 					! (guard (mode == b18nMode config) >> return checked)
-					+++ show mode +++ " "
-                                ) [SyntacticB18n, SemanticB18n, CombinedB18n]) +++ br +++
+					+++ b18nModeName mode +++ " "
+                                ) [SyntacticB18n, SemanticB18n, CombinedB18n]) +++ " " +++
 			       mkSubmit True BiDi
 			) +++
                         ( htmlMB generatedModuleMB $ \ generatedModule -> 
@@ -244,6 +242,10 @@ submitLabel Load  =   "Load example"
 submitLabel EvalGet = "view = get source"
 submitLabel EvalPut = "result = put source view"
 submitLabel BiDi =    "bidirectionalize"
+
+b18nModeName SemanticB18n = "Semantic bidir. (POPL’09)"
+b18nModeName SyntacticB18n = "Syntactic bidir. (ICFP’07)"
+b18nModeName CombinedB18n = "Combined bidir. (ICFP’10)"
 
 main = runCGI (handleErrors cgiMain)
 
