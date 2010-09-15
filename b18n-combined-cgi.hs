@@ -190,7 +190,10 @@ page (PageInfo {..}) =
 	)
        
 
-cdata s = primHtml ("<![CDATA[\n"++ s ++ "\n]]>")
+cdata s = primHtml $
+    -- "<!--//--><![CDATA[//><!--\n" ++
+    s
+    -- ++"\n//--><!]]>"
 
 maindiv = thediv ! [theclass "main"]
         
@@ -322,7 +325,7 @@ defaultPlayCode (Config{ b18nMode = CombinedB18n}) get =
             ]
 
 formMain = do
-        setHeader "Content-type" "application/xhtml+xml; charset=UTF-8"
+        setHeader "Content-type" "text/html; charset=UTF-8"
 
         conf <- do
             b18nMode' <- maybe CombinedB18n read <$> getInput "b18nMode"
