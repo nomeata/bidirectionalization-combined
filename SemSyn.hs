@@ -170,7 +170,29 @@ outputCode conf_ isShapify orig ast =
                   <> ppr (Name fName) <> text "_Bb rear s v" 
             _ ->
                 empty
-                                  
+
+
+isNormalMode conf =
+    ( b18nMode conf == SemanticB18n ) 
+    || ( (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n)
+         && (execMode conf == Normal) )
+
+isShapifyMode conf = 
+    (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n)
+    && (execMode conf == Shapify)
+
+isShapifyPlusMode conf =
+    (b18nMode conf == CombinedB18n) 
+    || ( (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n)
+         && (execMode conf == ShapifyPlus) )
+
+renderCode :: Config -> AST -> Doc
+renderCode conf cprog
+    | isNormalMode conf =      outputCode conf False (cprog) (typeInference cprog)
+    | isShapifyMode conf =     outputCode conf False (cprog) (shapify $ typeInference cprog)
+    | isShapifyPlusMode conf = outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
+    | otherwise =              outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
+
 
 checkBidirectionalizability :: AST -> Maybe String 
 checkBidirectionalizability ast = 

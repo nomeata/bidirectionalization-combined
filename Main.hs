@@ -215,21 +215,6 @@ usage = show $
                 lnextSpace (' ':_) = 0
                 lnextSpace (c:s)   = 1 + lnextSpace s 
 
-isNormalMode conf =
-    ( b18nMode conf == SemanticB18n ) 
-    || ( (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n)
-         && (execMode conf == Normal) )
-    
-
-isShapifyMode conf = 
-    (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n)
-    && (execMode conf == Shapify)
-
-isShapifyPlusMode conf =
-    (b18nMode conf == CombinedB18n) 
-    || ( (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n)
-         && (execMode conf == ShapifyPlus) )
-
 main :: IO ()
 main = do { args <- getArgs 
           ; let conf = adjustConfig $ parseArgs args defaultConfig
@@ -271,14 +256,7 @@ main = do { args <- getArgs
                                       ; print $ ppr p1 $$ ppr p2 $$ ppr p3
                                       ; putStrLn ""
                                       }
-                               _ | isNormalMode conf ->
-                                     print $ outputCode conf False (cprog) (typeInference cprog)
-                               _ | isShapifyMode conf -> 
-                                     print $ outputCode conf False (cprog) (shapify $ typeInference cprog)
-                               _ | isShapifyPlusMode conf -> 
-                                     print $ outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
-                               _ ->
-                                   print $ outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
+                               _ -> print $ renderCode conf cprog
                      }
           }
 
