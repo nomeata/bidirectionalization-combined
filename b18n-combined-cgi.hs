@@ -192,6 +192,11 @@ examples =
 		, "initWork a []    = []"
 		, "initWork a (b:x) = a:initWork b x"
 		])
+	, ("sieve", unlines
+		[ "sieve []      = []"
+		, "sieve [a]     = []"
+		, "sieve (a:b:x) = b:sieve x"
+		])
 	, ("initHalf", unlines
 		[ "initHalf []    = []"
 		, "initHalf (a:x) = a:initHalfWork x x"
@@ -200,11 +205,6 @@ examples =
 		, "initHalfWork xs  [x] = []"
 		, "initHalfWork (a:x) (b:c:y)"
 		, "                    = a:initHalfWork x y"
-		])
-	, ("sieve", unlines
-		[ "sieve []      = []"
-		, "sieve [a]     = []"
-		, "sieve (a:b:x) = b:sieve x"
 		])
 	, ("rev", unlines
 		[ "reverse xs = rev xs []"
