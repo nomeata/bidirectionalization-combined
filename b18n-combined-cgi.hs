@@ -320,8 +320,7 @@ formMain = do
         let (genCodeM,getM) = case (todo,eAST) of
                 (Just Load, _) -> (Nothing, Nothing)
                 (Just _, Right ast) ->
-                    (  Just $ render $
-                       outputCode conf True  ast (introNat $ shapify $ typeInference ast)
+                    (  Just $ render $ renderCode conf ast
                     ,  firstDeclaredName ast
                     )
                 _ -> (Nothing, Nothing)
