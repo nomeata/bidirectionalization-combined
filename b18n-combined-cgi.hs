@@ -118,7 +118,16 @@ page (PageInfo {..}) =
                      maindiv << p << (
                         "There was an error with the view function:" +++ br +++
                         pre << err +++ br +++
-                        mkSubmit True Check
+                        mkSubmit True Check +++
+                        p << (
+                            "The "+++
+                            hotlink "http://www-ps.iai.uni-bonn.de/cgi-bin/bff.cgi"
+                             << "purely semantic bidirectionalization technique" +++
+                            " (POPL’09) may still be able to handle your view function. "+++
+                            "For the combined technique (ICFP’10) it may be possible " +++
+                            "to recover applicability by using some program transformation "+++
+                            "techniques as discussed in Section 7 of the paper."
+                        )
                      )
 		  Nothing -> 
                      maindiv ! [ identifier "output" ]<< (
