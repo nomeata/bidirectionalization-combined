@@ -77,9 +77,15 @@ page (PageInfo {..}) =
                     ) +++
                     li << (
                       "“" +++
-		      hotlink ""
-                        << "TBT" +++
-		      "” (ICFP'10)"
+		      hotlink "http://www.iai.uni-bonn.de/~jv/icfp10.pdf"
+                        << "Combining Syntactic and Semantic Bidirectionalization" +++
+		      "” (ICFP'10) by " +++
+		      hotlink "http://www.iai.uni-bonn.de/~jv/"
+                        << "Janis Voigtländer" +++ ", " +++
+                      "Zhenjiang Hu, " +++
+		      hotlink "http://www.kb.ecei.tohoku.ac.jp/~kztk/"
+                        << "Kazutaka Matsuda" +++ ", " +++
+                      "Meng Wang"
                     )
 		)
 	) +++
