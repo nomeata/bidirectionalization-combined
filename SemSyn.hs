@@ -150,8 +150,8 @@ outputCode conf_ isShapify orig ast =
       genBwdDefBff (Name fName,(TFun is ts t)) =
           case (ts,t) of 
             ([TCon (Name "List") [TVar i]],TCon (Name "List") [TVar j]) | i == j  ->
-                ppr (Name fName) <> text "_B" $$
-                    nest 4 (text "= bff Main." <> ppr (Name fName)) 
+                ppr (Name fName) <> text "_B s v" $$
+                    nest 4 (text "= bff Main." <> ppr (Name fName) <+> text "s v") 
             _ ->
                 empty 
 --           ppr (Name fName) <> text "_B_Eq" $$
