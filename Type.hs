@@ -46,16 +46,13 @@ initTMap =
 
 
 typeInference (AST decls) = 
-    let mAst = do { (decls',_,_) <- 
-                        foldr (\decls m -> 
-                                   do (rdecls, tMap,  icount)  <- m
-                                      (decls', tMap', icount') <- inferenceStep decls tMap icount
-                                      return $ (decls'++rdecls, tMap', icount')
-                              ) (return ([],initTMap,initIcount)) declss
-                  ; return $ AST decls' } 
-    in case mAst of 
-         Left s  -> error s 
-         Right a ->  a 
+    do { (decls',_,_) <- 
+             foldr (\decls m -> 
+                        do (rdecls, tMap,  icount)  <- m
+                           (decls', tMap', icount') <- inferenceStep decls tMap icount
+                           return $ (decls'++rdecls, tMap', icount')
+                   ) (return ([],initTMap,initIcount)) declss
+       ; return $ AST decls' } 
     where
       initIcount = 100 -- FIXME 
       declss = 
