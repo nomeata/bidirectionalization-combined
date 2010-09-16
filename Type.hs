@@ -206,7 +206,9 @@ assignTypeVars tmpMap typeMap (Decl fname ftype ps e) =
                      do { ps' <- mapM assignTypeVarsP ps 
                         ; unifyFT t' (TFun [] (map typeofP ps') (TVar i))
                         ; unifyT  t  (TVar i)
-                        ; return $ PCon id (TVar i) c ps' }}
+                        ; return $ PCon id (TVar i) c ps' }
+                 Nothing -> fail $ "No entry " ++ show c ++ " in type map"
+             }
       assignTypeVarsE (EVar id t v) = 
           do { i <- newTypeVar 
              ; unifyT t (TVar i)
@@ -219,7 +221,7 @@ assignTypeVars tmpMap typeMap (Decl fname ftype ps e) =
                         ; unifyFT t' (TFun [] (map typeofE es') (TVar i))
                         ; unifyT  t  (TVar i)
                         ; return $ ECon id (TVar i) c es' }
-                 Nothing -> fail $ "No type " ++ show c ++ " in type map"
+                 Nothing -> fail $ "No entry " ++ show c ++ " in type map"
              }
       assignTypeVarsE (EFun id t f es) =
           do { i <- newTypeVar
