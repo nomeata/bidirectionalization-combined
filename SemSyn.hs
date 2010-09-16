@@ -203,23 +203,25 @@ renderCode conf cprog
 
 
 checkBidirectionalizability :: AST -> Maybe String 
-checkBidirectionalizability ast = 
-    case (checkTreeless $ eraseType ast, checkAffine $ eraseType ast)  of 
-      (Nothing, Nothing) -> Nothing
-      (Just (e,d),Nothing)       -> Just $ showTreelessError (e,d) 
-      (Nothing, Just (vs,d'))    -> Just $ showAffineError   (vs,d')
-      (Just (e,d), Just (vs,d')) -> Just $ showTreelessError (e,d) ++ "\n" ++ showAffineError (vs,d') 
+checkBidirectionalizability ast = if isEmpty msgs then Nothing else Just (show msgs)
     where
+      msgs = 
+        either (text.showTypeError) (const empty) (typeInference ast) $$
+        maybe empty (text.showTreelessError)      (checkTreeless $ eraseType ast) $$
+        maybe empty (text.showAffineError)        (checkAffine   $ eraseType ast)
+      showTypeError err
+          = show $ text "Error: program does not typecheck" $$
+                         nest 4 (text err)
       showTreelessError (e,d)
-          = show $ (text "Error: program is not treeless due to expression" $$
+          = show $ text "Error: program is not treeless due to expression" $$
                          nest 4 (ppr e) $$
                          text "in declaration" $$ 
-                         nest 4 (ppr d))
+                         nest 4 (ppr d)
       showAffineError (vs,d)
-          = show $ (text "Error: program is not affine due to variables" $$
+          = show $ text "Error: program is not affine due to variables" $$
                          nest 4 (ppr vs) $$
                          text "in declaration" $$ 
-                         nest 4 (ppr d))
+                         nest 4 (ppr d)
       
                                                          
                                                         
