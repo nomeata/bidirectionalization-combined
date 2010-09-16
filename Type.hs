@@ -78,12 +78,9 @@ typeInference (AST decls) =
 
 
 inferenceStep decls tmap icount = 
-    let (decls0,  (tmpMap, icount0))  
-            = runState (makeInitConstr tmap decls) ([],icount)
-        (decls' , (constr, icount')) 
-            = runState (mapM (assignTypeVars tmpMap tmap) decls0) ([],icount0)
-    in
-      do { (tmpMap', etypeMap') <- solveConstr tmpMap constr
+      do { (decls0,  (tmpMap, icount0)) <- runStateT (makeInitConstr tmap decls) ([],icount)
+         ; (decls' , (constr, icount')) <- runStateT (mapM (assignTypeVars tmpMap tmap) decls0) ([],icount0)
+         ; (tmpMap', etypeMap') <- solveConstr tmpMap constr
          ; let decls'' = map (repl tmpMap' etypeMap') decls'
          ; return (decls'', tmpMap' ++ tmap, icount') }
         where 
@@ -236,7 +233,7 @@ assignTypeVars tmpMap typeMap (Decl fname ftype ps e) =
                         ; unifyT  t  (TVar i)
                         ; return $ EFun id (TVar i) f es' }
                  _ ->
-                     error $ (show f ++ " is not in " ++ show (typeMap ++ tmpMap))
+                     fail $ (show f ++ " is not in " ++ show (typeMap ++ tmpMap))
              }
 --      unifyT :: Type -> Type -> State ([(Type,Type)],Int) ()
       unifyT (TUndet) _ = return ()
