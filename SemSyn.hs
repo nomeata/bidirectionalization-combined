@@ -106,7 +106,7 @@ outputCode conf_ isShapify orig ast =
              [ text "import Data.Bff" ] ++
              [ text "import BUtil" ] ++ 
              (map genBwdDefBff $ 
-                   let AST decls = typeInference orig 
+                   let Right (AST decls) = typeInference orig 
                    in map (\(Decl f t _ _:_) -> (f,t)) $ groupBy isSameFunc decls) ++
              [ ppr $ generateCodeDet orig ]             
          CombinedB18n -> vcat $ 
@@ -115,7 +115,7 @@ outputCode conf_ isShapify orig ast =
              ] ++ (
              if isShapify
              then map genBwdDef $
-                     let AST decls = typeInference orig
+                     let Right (AST decls) = typeInference orig
                      in map (\(Decl f t _ _:_) -> (f,t)) $ groupBy isSameFunc decls
              else []                                     
              ) ++
@@ -192,10 +192,14 @@ isShapifyPlusMode conf =
 
 renderCode :: Config -> AST -> Doc
 renderCode conf cprog
-    | isNormalMode conf =      outputCode conf False (cprog) (typeInference cprog)
-    | isShapifyMode conf =     outputCode conf False (cprog) (shapify $ typeInference cprog)
-    | isShapifyPlusMode conf = outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
-    | otherwise =              outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
+    | isNormalMode conf =      outputCode conf False (cprog) $
+                                    either error id $ typeInference cprog
+    | isShapifyMode conf =     outputCode conf False (cprog) $
+                                    shapify $ either error id $ typeInference cprog
+    | isShapifyPlusMode conf = outputCode conf True  (cprog) $
+                                    introNat $ shapify $ either error id $ typeInference cprog
+    | otherwise =              outputCode conf True  (cprog) $
+                                    introNat $ shapify $ either error id $ typeInference cprog
 
 
 checkBidirectionalizability :: AST -> Maybe String 

@@ -229,7 +229,9 @@ main = do { args <- getArgs
                                        parseFile filename
                      ; case csterr of
                          Left err -> hPutStrLn stderr (show err)
-                         Right cprog -> 
+                         Right cprog ->  case typeInference cprog of
+                            Left err -> hPutStrLn stderr err
+                            Right typeChecked -> 
                              case execMode conf of 
 --                                Normal | (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n) -> 
 --                                    print $
@@ -241,7 +243,7 @@ main = do { args <- getArgs
 --                                    print $
 --                                          outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
                                Debug ->
-                                   putStrLn "Debug mode does nothing."
+                                       putStrLn "Debug mode does nothing."
 --                                    do { print $ ppr   $ cprog
 --                                       -- ; print $ pprAM $ constructAutomaton (typeInference cprog) initTAMap
 --                                       ; let (p1,p2,p3) = constructBwdFunction (typeInference cprog)
@@ -258,13 +260,13 @@ main = do { args <- getArgs
 --                                       ; putStrLn ""
 --                                       }
                                _ | isNormalMode conf ->
-                                     let transformed = typeInference cprog 
+                                     let transformed = typeChecked
                                      in checkAndDoBidirectionalize conf False cprog transformed
                                _ | isShapifyMode conf -> 
-                                     let transformed = shapify $ typeInference cprog 
+                                     let transformed = shapify $ typeChecked
                                      in checkAndDoBidirectionalize conf False cprog transformed
                                _ | isShapifyPlusMode conf || True -> 
-                                     let transformed = introNat $ shapify $ typeInference cprog
+                                     let transformed = introNat $ shapify $ typeChecked
                                      in checkAndDoBidirectionalize conf True cprog transformed 
                      }
           }
