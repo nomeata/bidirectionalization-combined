@@ -132,7 +132,7 @@ page (PageInfo {..}) =
                         )
                      )
 		  Nothing -> 
-                     maindiv ! [ identifier "output" ]<< (
+                    maindiv ! [ identifier "output" ]<< (
 			p << ( "You can try all three bidirectionalization methods." ) +++
 			p << (  concatHtml (map (\mode -> 
 			          radio "b18nMode" (show mode) 
@@ -153,27 +153,27 @@ page (PageInfo {..}) =
                             )
 
                         )
-                     )
-		) +++
-                ( htmlMB playCodeMB $ \playCode -> maindiv << ( 
-                    p << (  "You can now play with the code. You can modify the " +++
-                            tt << "source" +++ " and calculate the " +++
-                            tt << "view" +++ ", or modify the " +++
-                            tt << "view" +++ " and calculate an updated "+++
-                            tt << "source" +++ "." +++ br +++
-                            textarea ! [name "playCode", cols "120", rows "12" ] << playCode
                     ) +++
-                    p << ( "Evaluate " +++
-                           mkSubmit True EvalGet +++ " " +++
-                           mkSubmit True EvalPut
-                    )
-                )) +++
-                ( htmlMB playErrorM $ \playError -> maindiv << ( 
-                    p << (
-                        strong << "An error occurred while evaluating your code:" +++ br +++
-                        pre << playError
+                    ( htmlMB playCodeMB $ \playCode -> maindiv << ( 
+                        p << (  "You can now play with the code. You can modify the " +++
+                                tt << "source" +++ " and calculate the " +++
+                                tt << "view" +++ ", or modify the " +++
+                                tt << "view" +++ " and calculate an updated "+++
+                                tt << "source" +++ "." +++ br +++
+                                textarea ! [name "playCode", cols "120", rows "12" ] << playCode
+                        ) +++
+                        p << ( "Evaluate " +++
+                               mkSubmit True EvalGet +++ " " +++
+                               mkSubmit True EvalPut
                         )
-                ))
+                    )) +++
+                    ( htmlMB playErrorM $ \playError -> maindiv << ( 
+                        p << (
+                            strong << "An error occurred while evaluating your code:" +++ br +++
+                            pre << playError
+                            )
+                    ))
+		) 
 	) +++
         maindiv << (
 	    p << (
