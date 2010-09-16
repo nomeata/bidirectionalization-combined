@@ -42,7 +42,7 @@ data PageInfo = PageInfo
 
 page (PageInfo {..}) =
        header << (
-	thetitle << "(Combining) Syntatic and Semantic Bidirectionalization" +++
+	thetitle << "(Combining) Syntactic and Semantic Bidirectionalization" +++
 	style ! [ thetype "text/css" ] << cdata cssStyle +++
 	script ! [ thetype "text/javascript", src "?jquery" ] << noHtml +++
         script ! [ thetype "text/javascript" ] << cdata jsCode 
@@ -64,7 +64,7 @@ page (PageInfo {..}) =
                         << "Kazutaka Matsuda" +++ ", " +++
                       "Zhenjiang Hu, " +++
                       "Keisuke Nakano, " +++
-                      "Makoto Hamana and " +++
+                      "Makoto Hamana, and " +++
                       "Masato Takeichi."
                     ) +++
                     li << (
@@ -80,11 +80,9 @@ page (PageInfo {..}) =
 		      hotlink "http://www.iai.uni-bonn.de/~jv/icfp10.pdf"
                         << "Combining Syntactic and Semantic Bidirectionalization" +++
 		      "” (ICFP’10) by " +++
-		      hotlink "http://www.iai.uni-bonn.de/~jv/"
-                        << "Janis Voigtländer" +++ ", " +++
+                      "Janis Voigtländer" +++ ", " +++
                       "Zhenjiang Hu, " +++
-		      hotlink "http://www.kb.ecei.tohoku.ac.jp/~kztk/"
-                        << "Kazutaka Matsuda" +++ ", " +++
+                      "Kazutaka Matsuda" +++ ", and " +++
                       "Meng Wang"
                     )
 		)
@@ -99,7 +97,10 @@ page (PageInfo {..}) =
 		maindiv << (
 			 p << (
 				"Please enter the view function. The first function "+++
-                                "defined will be assumed to be your view function."
+                                "defined will be assumed to be your view function. You "+++
+                                "can use the first-order functional language from the "+++
+                                "ICFP'07 paper, in Haskell syntax. The view function must "+++
+                                "have type " +++ tt << "[a] -> [a]" +++ "."
 			) +++
 
 			p << (
@@ -202,6 +203,7 @@ examples =
 		[ "init []      = []"
 		, "init [a]     = []"
 		, "init (a:b:x) = a:initWork b x"
+		, ""
 		, "initWork a []    = []"
 		, "initWork a (b:x) = a:initWork b x"
 		])
@@ -214,13 +216,14 @@ examples =
 		[ "initHalf []    = []"
 		, "initHalf (a:x) = a:initHalfWork x x"
 		, ""
-		, "initHalfWork xs  []  = []"
-		, "initHalfWork xs  [x] = []"
-		, "initHalfWork (a:x) (b:c:y)"
-		, "                    = a:initHalfWork x y"
+		, "initHalfWork xs    []      = []"
+		, "initHalfWork xs    [x]     = []"
+		, "initHalfWork (a:x) (b:c:y) = a:initHalfWork x y"
 		])
 	, ("rev", unlines
-		[ "reverse xs = rev xs []"
+		[ "reverse []     = []"
+		, "reverse (x:xs) = rev xs [x]"
+		, ""
 		, "rev []    y = y"
 		, "rev (a:x) y = rev x (a:y)"
 		])
@@ -318,8 +321,8 @@ defaultPlayCode (Config{ b18nMode = CombinedB18n}) get =
             [ "get s = Main." ++ get ++ " s"
             , "put s v = fromMaybe (error \"Could not handle shape change.\") $ " ++
                  get ++ "_Bbd bias default_value s v"
-            , "bias = rear"
-            , "default_value = 42"
+            , "bias = rear         -- or another option, e.g., front, middle, borders"
+            , "default_value = 42  -- or another value of the element type of source"
             , ""
             , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
             ]
