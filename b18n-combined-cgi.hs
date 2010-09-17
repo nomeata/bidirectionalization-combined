@@ -85,6 +85,15 @@ page (PageInfo {..}) =
                       "Kazutaka Matsuda" +++ ", and " +++
                       "Meng Wang"
                     )
+		) +++
+		p << (
+		  "(For a stand-alone version on command line, which is also able to " +++
+                  "show intermediate steps in the transformations, see " +++
+		  hotlink "http://www.kb.ecei.tohoku.ac.jp/~kztk/b18n-combined/" << "here" +++ ". " +++
+		  "For the technique from POPL’09 alone, a "+++
+		  hotlink "http://www-ps.iai.uni-bonn.de/cgi-bin/bff.cgi"
+                    << "separate web interface" +++
+                  " offering more features is also available.)"
 		)
 	) +++
         form ! [method "post",
@@ -207,18 +216,22 @@ examples =
 		, "initWork a []    = []"
 		, "initWork a (b:x) = a:initWork b x"
 		])
+	, ("tail", unlines
+		[ "tail []     = []"
+		, "tail (x:xs) = xs"
+		])
 	, ("sieve", unlines
 		[ "sieve []      = []"
 		, "sieve [a]     = []"
 		, "sieve (a:b:x) = b:sieve x"
 		])
-	, ("initHalf", unlines
-		[ "initHalf []    = []"
-		, "initHalf (a:x) = a:initHalfWork x x"
+	, ("halve", unlines
+		[ "halve []    = []"
+		, "halve (a:x) = a:halveWork x x"
 		, ""
-		, "initHalfWork xs    []      = []"
-		, "initHalfWork xs    [x]     = []"
-		, "initHalfWork (a:x) (b:c:y) = a:initHalfWork x y"
+		, "halveWork xs    []      = []"
+		, "halveWork xs    [x]     = []"
+		, "halveWork (a:x) (b:c:y) = a:halveWork x y"
 		])
 	, ("rev", unlines
 		[ "reverse []     = []"
