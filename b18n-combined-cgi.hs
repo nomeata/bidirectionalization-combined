@@ -89,7 +89,7 @@ page (PageInfo {..}) =
 		p << (
 		  "(For a stand-alone version on command line, which is also able to " +++
                   "show intermediate steps in the transformations, see " +++
-		  hotlink "http://www.kb.ecei.tohoku.ac.jp/~kztk/b18n-combined/" << "here" +++ ". " +++
+		  hotlink "http://www.kb.ecei.tohoku.ac.jp/~kztk/b18n-combined/desc.html" << "here" +++ ". " +++
 		  "For the technique from POPL’09 alone, a "+++
 		  hotlink "http://www-ps.iai.uni-bonn.de/cgi-bin/bff.cgi"
                     << "separate web interface" +++
