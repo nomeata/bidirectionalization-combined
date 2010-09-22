@@ -1,4 +1,4 @@
-module Type where
+module Type (eraseType, eraseTypeT, typeInference) where
 
 import AST 
 
@@ -8,7 +8,6 @@ import Control.Monad.Error
 import Util
 import Data.Maybe
 import Data.List (nub,nubBy,union)
-
 
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -54,10 +53,10 @@ typeInference (AST decls) =
                    ) (return ([],initTMap,initIcount)) declss
        ; return $ AST decls' } 
     where
-      initIcount = 100 -- FIXME 
+      initIcount = max 1 ((foldr max 0 $ map maxTVarCount decls)+1) -- FIXME 
       declss = 
           let scc = stronglyConnComp callGraph 
-          in  reverse $ map (\x -> case x of 
+          in reverse $ map (\x -> case x of 
                            AcyclicSCC f  -> 
                                filter (\(Decl g _ _ _) -> f == g) decls
                            CyclicSCC  fs -> 
@@ -73,6 +72,26 @@ typeInference (AST decls) =
       funCallsE (EFun _ _ f es) = f:concatMap funCallsE es 
       funCallsE (ECon _ _ _ es) = concatMap funCallsE es 
 
+
+maxTVarCount (Decl f t ps e) =
+    (maxTVarFT t) 
+    `max` (foldr max 0 $ map maxTVarP ps) 
+    `max` (maxTVarE e)
+    where
+      maxTVarFT FTUndet        = 0 
+      maxTVarFT (TFun is ts t) = foldr max 0 is
+      maxTVarP  (PVar _ t _)    = fromT t
+      maxTVarP  (PCon _ t _ ps) = fromT t `max` 
+                                  (foldr max 0 $ map maxTVarP ps)
+      maxTVarE  (EVar _ t _)    = fromT t 
+      maxTVarE  (EFun _ t _ es) = fromT t `max`
+                                  (foldr max 0 $ map maxTVarE es)
+      maxTVarE  (ECon _ t _ es) = fromT t `max`
+                                  (foldr max 0 $ map maxTVarE es)
+      fromT (TUndet) = 0
+      fromT (TVar i) = i 
+      fromT (TCon _ ts) = 
+          foldr max 0 $ map fromT ts 
 
 inferenceStep decls tmap icount = 
       do { (decls0,  (tmpMap, icount0)) <- runStateT (makeInitConstr tmap decls) ([],icount)
