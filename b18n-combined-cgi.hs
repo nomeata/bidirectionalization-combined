@@ -108,7 +108,7 @@ page (PageInfo {..}) =
 				"Please enter the view function. The first function "+++
                                 "defined will be assumed to be your view function. You "+++
                                 "can use the first-order functional language from the "+++
-                                "ICFP'07 paper, in Haskell syntax. The view function must "+++
+                                "ICFP’07 paper, in Haskell syntax. The view function must "+++
                                 "have type " +++ tt << "[a] -> [a]" +++ "."
 			) +++
 
