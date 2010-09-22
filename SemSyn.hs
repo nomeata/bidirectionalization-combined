@@ -122,27 +122,6 @@ outputCode conf_ isShapify orig ast =
              [ ppr (constructTypeDecl p2)
              , ppr $ generateCodeBwd (orig,p1,p2,p3)
              ]
-                             
--- case outputMode conf of 
---          ForwardCode ->
---                   ppr (typeFilter ast)
---          PseudoCode  -> vcat
---                 [ ppr (constructTypeDecl p2)
---                 , ppr orig $$ ppr (typeFilter p1) $$ ppr (typeFilter p2) $$ ppr (typeFilterT p3)
---                 ]
---          HaskellCode -> vcat $
---                 [ text "import Control.Monad"
---                 , text "import BUtil"
---                 ] ++ (
---                 if isShapify
---                 then map genBwdDef $
---                         let AST decls = typeInference orig
---                         in map (\(Decl f t _ _:_) -> (f,t)) $ groupBy isSameFunc decls
---                 else []                                     
---                 ) ++
---                 [ ppr (constructTypeDecl p2)
---                 , ppr $ generateCodeBwd (orig,p1,p2,p3)
---                 ]
     where
       conf       = adjustConfig conf_
       typeFilter  = if isShowType conf then id else eraseType

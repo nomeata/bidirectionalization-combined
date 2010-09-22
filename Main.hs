@@ -233,32 +233,8 @@ main = do { args <- getArgs
                             Left err -> hPutStrLn stderr err
                             Right typeChecked -> 
                              case execMode conf of 
---                                Normal | (b18nMode conf == SyntacticB18n || b18nMode conf == NoB18n) -> 
---                                    print $
---                                          outputCode conf False (cprog) (typeInference cprog)
--- --                                Shapify -> print $
--- --                                    outputCode conf False (cprog) (shapify $ typeInference cprog)
--- --                                    -- putStrLn "Not Supported Now."
---                                ShapifyPlus -> 
---                                    print $
---                                          outputCode conf True  (cprog) (introNat $ shapify $ typeInference cprog)
                                Debug ->
                                        putStrLn "Debug mode does nothing."
---                                    do { print $ ppr   $ cprog
---                                       -- ; print $ pprAM $ constructAutomaton (typeInference cprog) initTAMap
---                                       ; let (p1,p2,p3) = constructBwdFunction (typeInference cprog)
---                                       ; print $ ppr p1 $$ ppr p2 $$ ppr p3
---                                       ; print $ ppr $ constructTypeDecl p2 
---                                       ; print $ ppr $ generateCodeBwd (typeInference cprog, p1,p2,p3)
---                                       ; putStrLn ""
---                                       ; putStrLn $ "---- After \"Shapify\" ----" 
---                                       ; let cprog' = introNat $ shapify $ typeInference cprog 
---                                       -- ; print $ pprAM $ constructAutomaton cprog' initTAMap
---                                       ; print $ cprog'                                       
---                                       ; let (p1,p2,p3) = constructBwdFunction cprog' 
---                                       ; print $ ppr p1 $$ ppr p2 $$ ppr p3
---                                       ; putStrLn ""
---                                       }
                                _ | isNormalMode conf ->
                                      let transformed = typeChecked
                                      in checkAndDoBidirectionalize conf False cprog transformed
