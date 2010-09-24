@@ -1,0 +1,123 @@
+ `b18n-combined`: Combining Syntactic and Semantic Bidirectionalization
+======================================================================
+
+What's This?
+------------
+
+This program, `b18n-combined`, is a prototype implementation of
+the paper "Combining Syntactic and Semantic Bidirectionalization" 
+written by Janis Voigtl&auml;nder, Zhenjiang Hu, Kazutaka Matsuda,
+and Meng Wang, which is accepted at ICFP'10.
+
+The program takes input program describing a view function that constructs a view from a source, 
+and generates a put-back function that reflects updates on the view to the source. 
+Thanks to combination of syntactic and semantic bidirectionalization, 
+the program can generates effective put-back functions in the sense that
+the generated put-back functions can put back more updates than 
+those obtained by either of syntactic/semantic bidirectionalization.
+
+Example
+-------
+ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ {.shell}
+$ cat example/init.txt 
+init []          = []
+init [a]         = []
+init (a:b:x)     = a:initWork b x
+initWork a []    = []
+initWork a (b:x) = a:initWork b x
+$ ./dist/build/b18n-combined/b18n-combined example/sieve.txt -syn -hs
+import Control.Monad
+import BUtil
+data Cmpl t0 t1
+    = Csieve_Cmpl_1
+    | Csieve_Cmpl_2 t0
+    | Csieve_Cmpl_3 t1 (Cmpl t0 t1)
+sieve ([]) = []
+sieve (a : []) = []
+sieve (a : (b : x)) = b : sieve (x)
+sieve_B s v = head (sieve_T_I v (sieve_Cmpl s))
+sieve_Cmpl ([]) = Csieve_Cmpl_1
+sieve_Cmpl (a : []) = Csieve_Cmpl_2 a
+sieve_Cmpl (a : (b : x)) = Csieve_Cmpl_3 a (sieve_Cmpl (x))
+sieve_T_I x1 x2 = mplus (sieve_T_I_1 x1 x2) (mplus (sieve_T_I_2 x1 x2) (mplus (sieve_T_I_3 x1 x2) mzero))
+sieve_T_I_1 [] (Csieve_Cmpl_1) = do return ([])
+sieve_T_I_1 _ _ = mzero
+sieve_T_I_2 [] (Csieve_Cmpl_2 a) = do return (a : [])
+sieve_T_I_2 _ _ = mzero
+sieve_T_I_3 (b : tv1) (Csieve_Cmpl_3 a
+                                     tc1) = do (x) <- sieve_T_I tv1 tc1
+                                               return (a : (b : x))
+sieve_T_I_3 _ _ = mzero
+$ ./b18n-combined example/sieve.txt -sem
+import Data.Bff
+import BUtil
+sieve_B s v
+    = bff Main.sieve s v
+sieve ([]) = []
+sieve (a : []) = []
+sieve (a : (b : x)) = b : sieve (x)
+$ ./b18n-combined example/sieve.txt -comb 
+import Control.Monad
+import BUtil
+sieve_Bb bias s v
+    = gen_put_bias bias Main.sieve(\x y -> castError $ (sieve_22_B $! x) $! y) s v
+sieve_Bbd = withDefaultBias sieve_Bb
+sieve_Bd = withDefault sieve_B
+sieve_B s v = sieve_Bb rear s v
+data Cmpl
+    = Csieve_22_Cmpl_1
+    | Csieve_22_Cmpl_2
+sieve ([]) = []
+sieve (a : []) = []
+sieve (a : (b : x)) = b : sieve (x)
+sieve_22_B s v = head (sieve_22_T_I v (sieve_22_Cmpl s))
+sieve_22_Cmpl (Z) = Csieve_22_Cmpl_1
+sieve_22_Cmpl (S (Z)) = Csieve_22_Cmpl_2
+sieve_22_Cmpl (S (S x)) = sieve_22_Cmpl (x)
+sieve_22_T_I x1 x2 = mplus (sieve_22_T_I_1 x1 x2) (mplus (sieve_22_T_I_2 x1 x2) (mplus (sieve_22_T_I_3 x1 x2) mzero))
+sieve_22_T_I_1 (Z) (Csieve_22_Cmpl_1) = do return (Z)
+sieve_22_T_I_1 _ _ = mzero
+sieve_22_T_I_2 (Z) (Csieve_22_Cmpl_2) = do return (S Z)
+sieve_22_T_I_2 _ _ = mzero
+sieve_22_T_I_3 (S tv1) tc1 = do (x) <- sieve_22_T_I tv1 tc1
+                                return (S (S x))
+sieve_22_T_I_3 _ _ = mzero
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+How to Build
+------------
+
+
+  0. Install [GHC] and make sures that following Haskell packages 
+     are installed.
+     * mtl, template-haskell, containers, pretty, parsec (for web interface: directory, xhtml, cgi, utf8-string, bytestring, unix, hint >= 0.3.2)
+  1. Get the source tarball from 
+     [./b18n-combined-0.1.tar.gz](./b18n-combined-0.1.tar.gz).
+  2. Unfold the source tarball
+     * `tar zxvf b18n-combined-0.1.tar.gz` 
+  3. Build the executables by 
+     1. `cabal configure`
+     2. `cabal build`
+    
+Note that the source code is also available via darcs.
+
+     darcs get http://www.kb.ecei.tohoku.ac.jp/~kztk/darcs/sem_syn/
+
+[GHC]: http://www.haskell.org/ghc/
+
+
+Limitation
+----------
+
+Current implementation can handle lists only.
+
+<div class="footer">
+
+----------------------------------------------------
+<address>Kazutaka Matsuda: <kztk@kb.ecei.tohoku.ac.jp>.</address>
+
+<p>The first version of this page was published in Jul. 29th, 2010.</p>
+
+</div>
+
