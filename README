@@ -93,8 +93,16 @@ sieve_22_T_I_3 (S tv1) tc1 = do (x) <- sieve_22_T_I tv1 tc1
 sieve_22_T_I_3 _ _ = mzero
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-How to Build
-------------
+How to Build using cabal-install
+--------------------------------
+
+If you have [cabal-install] (part of the Haskell Platform) available on your system, you can install b18n-combined using the command
+	cabal install bidirectionalization-combined
+
+[cabal-install]: http://haskell.org/cabal/download.html
+
+How to Build manually
+---------------------
 
 
   0. Install [GHC] and make sures that following Haskell packages 
