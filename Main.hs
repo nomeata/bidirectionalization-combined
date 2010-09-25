@@ -82,7 +82,7 @@ options =
               $$ text "This options implies \"-n\".")
              (NullaryAction (\conf -> conf {outputMode = HaskellCode, execMode = ShapifyPlus})),
       Option "-P"  (Just "--pseudo-code") empty
-             (text "(Obsolete) Return a pseudo code only after syntatic bidirectionalizatoin."
+             (text "(Obsolete) Return a pseudo code only after syntactic bidirectionalizatoin."
               $$ text "Note that \"wrapping\" code for semantic bidirectionalization is not produced.")
              (NullaryAction (\conf -> conf {outputMode = PseudoCode })),
       Option "-F"  (Just "--forward-only") empty
@@ -98,7 +98,7 @@ options =
              (text"No Bidirectionalization (transformation stops after pre-processing)")
              (NullaryAction (\conf -> conf {b18nMode = NoB18n})),
       Option "-syn" (Just "--syntactic") empty 
-             (text"Syntatic Bidirectionalization.")
+             (text"Syntactic Bidirectionalization.")
              (NullaryAction (\conf -> conf {b18nMode = SyntacticB18n, outputMode = OM_NotSpecified  })),
       Option "-sem" (Just "--semantic") empty 
              (text"Semantic Bidirectionalization.")
@@ -192,7 +192,7 @@ usage = show $
          wrap 80 ( "Given a \"get\" function defined in a file specified by FILENAME, "
                   ++ "the program returns \"put\" function by combining "
                   ++ "semantic bidirectionalization (Janis Voiglander: POPL'09) "
-                  ++ "and syntatic bidirectionalization (Kazutaka Matsuda et al.: ICFP'07). A typical usage is \""++ progName ++ " FILENAME\", which correspondes to the paper.\n"
+                  ++ "and syntactic bidirectionalization (Kazutaka Matsuda et al.: ICFP'07). A typical usage is \""++ progName ++ " FILENAME\", which correspondes to the paper.\n"
                   ) $+$
     text "OPTIONS" $$
     text "-------" $$
