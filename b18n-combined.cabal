@@ -5,13 +5,19 @@ Description:         This is a prototype implementation of the idea presented
                      in Combining Syntatic and Semantic Bidirectionalization 
                      by Janis Voigtlaender, Zhenjiang Hu, Kazutaka Matsuda 
                      and Meng Wang.
+		     .
+		     This package builds two executables to experiment with the system,
+		     a command line program "b18-combined" and a CGI based web interface
+		     "b18n-combined-cgi". The latter is also available on
+		     http://www.kb.ecei.tohoku.ac.jp/~kztk/b18n-combined/
 License:             PublicDomain
 Author:              Kazutaka Matsuda, Joachim Breitner
 Maintainer:          kztk@kb.ecei.tohoku.ac.jp
+Homepage:	     http://www.kb.ecei.tohoku.ac.jp/~kztk/b18n-combined/desc.html
 Category:            Language
 Build-type:          Simple
 Cabal-version:       >=1.6
-Extra-source-files:  example/*.txt BundledCode.hsb JQuery.hsb jquery.min.js
+Extra-source-files:  example/*.txt BundledCode.hsb JQuery.hsb jquery.min.js README
 Data-files:          BUtil.hs
 
 source-repository head
