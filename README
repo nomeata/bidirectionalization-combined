@@ -105,8 +105,8 @@ How to Build
   2. Unfold the source tarball
      * `tar zxvf bidirectionalization-combined-0.1.tar.gz` 
   3. Build the executables by 
-     1. `cabal configure`
-     2. `cabal build`
+     1. `runhaskell Setup.hs configure`
+     2. `runhaskell Setup.hs build`
     
 Note that the source code is also available via darcs.
 
