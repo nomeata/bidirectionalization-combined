@@ -16,6 +16,14 @@ the program can generates effective put-back functions in the sense that
 the generated put-back functions can put back more updates than 
 those obtained by either of syntactic/semantic bidirectionalization.
 
+Online version
+--------------
+
+A [CGI version] of the program is provided for your convenience.
+
+[CGI version]: http://www.kb.ecei.tohoku.ac.jp/~kztk/b18n-combined/
+
+
 Example
 -------
  
