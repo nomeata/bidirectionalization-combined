@@ -8,8 +8,8 @@ Description:         This is a prototype implementation of the idea presented
 		     .
 		     This package builds two executables to experiment with the system,
 		     a command line program "b18-combined" and a CGI based web interface
-		     "b18n-combined-cgi". The latter is also available on
-		     http://www.kb.ecei.tohoku.ac.jp/~kztk/b18n-combined/
+		     "b18n-combined-cgi". The latter is also available online at
+		     <http://www.kb.ecei.tohoku.ac.jp/~kztk/b18n-combined/>
 License:             PublicDomain
 Author:              Kazutaka Matsuda, Joachim Breitner
 Maintainer:          kztk@kb.ecei.tohoku.ac.jp
