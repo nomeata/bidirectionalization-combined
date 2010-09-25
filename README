@@ -101,9 +101,9 @@ How to Build
      are installed.
      * mtl, template-haskell, containers, pretty, parsec (for web interface: directory, xhtml, cgi, utf8-string, bytestring, unix, hint >= 0.3.2)
   1. Get the source tarball from 
-     [./b18n-combined-0.1.tar.gz](./b18n-combined-0.1.tar.gz).
+     [./bidirectionalization-combined-0.1.tar.gz](./bidirectionalization-combined-0.1.tar.gz) or from [hackage].
   2. Unfold the source tarball
-     * `tar zxvf b18n-combined-0.1.tar.gz` 
+     * `tar zxvf bidirectionalization-combined-0.1.tar.gz` 
   3. Build the executables by 
      1. `cabal configure`
      2. `cabal build`
@@ -113,6 +113,7 @@ Note that the source code is also available via darcs.
      darcs get http://www.kb.ecei.tohoku.ac.jp/~kztk/darcs/sem_syn/
 
 [GHC]: http://www.haskell.org/ghc/
+[hackage]: http://hackage.haskell.org/package/bidirectionalization-combined
 
 
 Limitation
