@@ -188,7 +188,7 @@ page (PageInfo {..}) =
         maindiv << (
 	    p << (
 		"The source code of this application and the underlying library can be found " +++
-		hotlink "TODO" << "here"+++
+		hotlink "http://hackage.haskell.org/package/bidirectionalization-combined" << "on hackage" +++
 		". " +++
                 "The code for the web interface is based on " +++
                 hotlink "http://www-ps.iai.uni-bonn.de/cgi-bin/bff.cgi" << 
