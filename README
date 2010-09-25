@@ -16,7 +16,7 @@ the program can generates effective put-back functions in the sense that
 the generated put-back functions can put back more updates than 
 those obtained by either of syntactic/semantic bidirectionalization.
 
-Online version
+Online Version
 --------------
 
 A [CGI version] of the program is provided for your convenience.
@@ -93,7 +93,7 @@ sieve_22_T_I_3 (S tv1) tc1 = do (x) <- sieve_22_T_I tv1 tc1
 sieve_22_T_I_3 _ _ = mzero
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-How to Build using cabal-install
+How to Build Using cabal-install
 --------------------------------
 
 If you have [cabal-install] (part of the Haskell Platform) available on your system, you can install b18n-combined using the command
@@ -101,7 +101,7 @@ If you have [cabal-install] (part of the Haskell Platform) available on your sys
 
 [cabal-install]: http://haskell.org/cabal/download.html
 
-How to Build manually
+How to Build Manually
 ---------------------
 
 
