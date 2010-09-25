@@ -97,7 +97,8 @@ How to Build Using cabal-install
 --------------------------------
 
 If you have [cabal-install] (part of the Haskell Platform) available on your system, you can install b18n-combined using the command
-	cabal install bidirectionalization-combined
+
+    cabal install bidirectionalization-combined
 
 [cabal-install]: http://haskell.org/cabal/download.html
 
