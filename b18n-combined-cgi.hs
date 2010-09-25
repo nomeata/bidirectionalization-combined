@@ -6,11 +6,10 @@ import Data.List
 import Data.ByteString.Lazy.UTF8 (fromString)
 import qualified Data.ByteString.Lazy as BS
 import Control.Monad
-import Control.Applicative ((<$>),(<*>))
+import Control.Applicative ((<$>))
 import Text.PrettyPrint.HughesPJ (render)
 import System.IO
 import System.IO.Error hiding ( catch )
-import Text.ParserCombinators.Parsec (ParseError)
 import System.Directory
 import Prelude hiding ( catch )
 import Control.Exception
@@ -20,13 +19,15 @@ import System.Posix.Env
 
 import Parser
 import SemSyn
-import Type
-import Shapify
 import AST
 
 import MyInterpret
 import BundledCode
 import JQuery
+
+{-------------------------
+ - Types (Logic/Presentation interface
+ -------------------------}
 
 data PageInfo = PageInfo
     { config :: Config
@@ -40,6 +41,254 @@ data PageInfo = PageInfo
     , playErrorM :: Maybe String
     } 
 
+data Run = Get | Check | Load | BiDi | EvalPut | EvalGet
+
+{-------------------------
+ - Default and example data
+ -------------------------}
+
+examples :: [(String, String)]
+examples =
+	[ ("init", unlines
+		[ "init []      = []"
+		, "init [a]     = []"
+		, "init (a:b:x) = a:initWork b x"
+		, ""
+		, "initWork a []    = []"
+		, "initWork a (b:x) = a:initWork b x"
+		])
+	, ("tail", unlines
+		[ "tail []     = []"
+		, "tail (x:xs) = xs"
+		])
+	, ("sieve", unlines
+		[ "sieve []      = []"
+		, "sieve [a]     = []"
+		, "sieve (a:b:x) = b:sieve x"
+		])
+	, ("halve", unlines
+		[ "halve []    = []"
+		, "halve (a:x) = a:halveWork x x"
+		, ""
+		, "halveWork xs    []      = []"
+		, "halveWork xs    [x]     = []"
+		, "halveWork (a:x) (b:c:y) = a:halveWork x y"
+		])
+	, ("rev", unlines
+		[ "reverse []     = []"
+		, "reverse (x:xs) = rev xs [x]"
+		, ""
+		, "rev []    y = y"
+		, "rev (a:x) y = rev x (a:y)"
+		])
+	]
+
+defaultPlayCode :: Config -> String -> Maybe String
+defaultPlayCode (Config{ b18nMode = SyntacticB18n}) get =
+        Just $ unlines
+            [ "get s = Main." ++ get ++ " s"
+            , "put s v = " ++ get ++ "_B s v"
+            , ""
+            , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+            ]
+defaultPlayCode (Config{ b18nMode = SemanticB18n}) get =
+        Just $ unlines
+            [ "get s = Main." ++ get ++ " s"
+            , "put s v = " ++ get ++ "_B s v"
+            , ""
+            , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+            ]
+defaultPlayCode (Config{ b18nMode = CombinedB18n}) get =
+        Just $ unlines
+            [ "get s = Main." ++ get ++ " s"
+            , "put s v = fromMaybe (error \"Could not handle shape change.\") $ " ++
+                 get ++ "_Bbd bias default_value s v"
+            , "bias = rear         -- or another option, e.g., front, middle, borders"
+            , "default_value = 42  -- or another value of the element type of source"
+            , ""
+            , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
+            ]
+
+defaultCode :: String
+defaultCode = fromJust (lookup "init" examples)
+
+{-------------------------
+ - Program logic
+ -------------------------}
+
+-- This function will not work in all casses, but in most.
+delDefinition :: String -> String -> String
+delDefinition name code = unlines squashed
+  where filtered = filter (not . defines name) (lines code)
+	squash [] = []
+	squash ("":_) = [""]
+	squash ("\r":_) = [""]
+	squash ls = ls
+	squashed = concat $ map squash $ group $ filtered
+
+addDefinition :: String -> String -> String -> String
+addDefinition name def code = unlines (squashed ++ pad ++ new_line)
+  where	squashed = lines (delDefinition name code)
+	pad | last squashed == "" || last squashed == "\r" = []
+            | otherwise                                    = [""]
+	new_line = [name ++ " = " ++ def]
+	
+defines :: String -> String -> Bool
+defines "" (' ':_) = True
+defines "" ('=':_) = True
+defines "" "" = False
+defines "" _   = False
+defines _  ""  = False
+defines (i:is) (x:xs) | i == x    = defines is xs
+                      | otherwise = False
+
+formMain :: CGI CGIResult
+formMain = do
+        setHeader "Content-type" "text/html; charset=UTF-8"
+
+        conf <- do
+            b18nMode' <- maybe CombinedB18n read <$> getInput "b18nMode"
+            return $ adjustConfig $ defaultConfig
+                { isHaskellify = True
+                , b18nMode = b18nMode'
+                }
+	
+	todo <- msum <$> sequence (
+            map (\what -> fmap (const what) <$> getInput (submitId what))
+            [ BiDi, Get, Check, Load, EvalPut, EvalGet])
+        
+	code <- filter (/= '\r') <$> fromMaybe defaultCode <$> getInput "code"
+
+        code <- case todo of
+            Just Load -> do loadWhat <- getInput "loadCode"
+                            return $ fromMaybe code $ loadWhat >>= flip lookup examples 
+            _ -> return code
+        
+        let eAST = parseString code
+
+
+        let astError = either (Just . show) checkBidirectionalizability eAST
+
+        let (genCodeM,getM) = case (todo,eAST) of
+                (Just Load, _) -> (Nothing, Nothing)
+                (Just _, Right ast) ->
+                    (  Just $ render $ renderCode conf ast
+                    ,  firstDeclaredName ast
+                    )
+                _ -> (Nothing, Nothing)
+
+        showCode <- maybe False read <$> getInput "showCode"
+
+        pcM <- getInput "playCode" 
+        (playCode, playErrorM) <-
+            case (todo,getM,genCodeM,pcM) of
+            -- The user successfully generated code to play with, insert default playCode.
+            -- Do not use the user input, as he probably switched to a new example.
+            (Just BiDi, Just get, Just _, _) ->
+                return (defaultPlayCode conf get, Nothing)
+            -- The user played with the code
+            (Just EvalGet, Just get, Just genCode, Just pc) -> do
+                view <- liftIO $ evaluateWith genCode pc ("get source")
+                case view of 
+                    Left err -> return $ (Just pc, Just err)
+                    Right dat -> return $ (\r -> (Just r, Nothing))
+                                        $ addDefinition "view" dat 
+                                        $ delDefinition "result"
+                                        $ pc
+            (Just EvalGet, Just get, Just genCode, Nothing) -> do
+                return (defaultPlayCode conf get, Nothing)
+            (Just EvalPut, Just get, Just genCode, Just pc) -> do
+                view <- liftIO $ evaluateWith genCode pc ("put source view")
+                case view of 
+                    Left err -> return $ (Just pc, Just err)
+                    Right dat -> return $ (\r -> (Just r, Nothing))
+                                        $ addDefinition "result" dat 
+                                        $ pc
+            (Just EvalPut, Just get, Just _, Nothing) -> do
+                return (defaultPlayCode conf get, Nothing)
+            _ -> return (Nothing, Nothing)
+
+        scrollX <- getInput "scrollx"
+        scrollY <- getInput "scrolly"
+
+        outputFPS $ fromString $ showHtml $ page $
+            PageInfo conf
+                     scrollX
+                     scrollY
+                     code
+                     astError
+                     genCodeM
+                     showCode
+                     playCode
+                     playErrorM
+
+evaluateWith :: String -> String -> String -> IO (Either String String)
+evaluateWith genCode playCode expr =
+    withinTmpDir $ do
+        BS.writeFile "BUtil.hs" bUtilCode
+        writeFile "Main.hs" $ "module Main where\n" ++ genCode
+        liftIO $ catchInterpreterErrors $ simpleInterpret mods imports playCode expr
+  where mods = 
+            [ "BUtil"
+            , "Main"
+            --, "Data.Maybe"
+            ]
+        imports = mods ++
+            [ "Data.Maybe"
+            , "Prelude"
+            ]
+
+{-------------------------
+ - CGI Interface
+ -------------------------}
+
+main :: IO ()
+main = runCGI (handleErrors cgiMain)
+
+cgiMain :: CGI CGIResult
+cgiMain = do
+    qs <- queryString
+    if qs == "jquery"
+     then jQueryMain
+     else formMain
+
+jQueryMain :: CGI CGIResult
+jQueryMain = do
+        setHeader "Content-type" "text/javascript"
+        setHeader "Expires" "Fri, 01 Jan 2100 00:00:00 +0100"
+        setHeader "Cache-control" "max-age=36000000" -- 1000 h
+        outputFPS $ jQueryCode
+    
+
+{-------------------------
+ - HTML generation
+ -------------------------}
+
+submitId :: Run -> String
+submitId Get = "get source"
+submitId Check = "check"
+submitId Load = "load"
+submitId BiDi = "submitBiDi"
+submitId EvalPut = "evalPut"
+submitId EvalGet = "evalGet"
+
+submitLabel :: Run -> String
+submitLabel Check =   "Re-Parse definition"
+submitLabel Load  =   "Load example"
+submitLabel EvalGet = "view = get source"
+submitLabel EvalPut = "result = put source view"
+submitLabel BiDi =    "bidirectionalize"
+
+b18nModeName :: B18nMode -> String
+b18nModeName SemanticB18n = "Semantic bidir. (POPL’09)"
+b18nModeName SyntacticB18n = "Syntactic bidir. (ICFP’07)"
+b18nModeName CombinedB18n = "Combined bidir. (ICFP’10)"
+
+mkSubmit :: Bool -> Run -> Html
+mkSubmit active what = submit (submitId what) (submitLabel what)
+     	               ! if active then [] else [disabled]
+
+page :: PageInfo -> Html
 page (PageInfo {..}) =
        header << (
 	thetitle << "(Combining) Syntactic and Semantic Bidirectionalization" +++
@@ -152,7 +401,6 @@ page (PageInfo {..}) =
 			       mkSubmit True BiDi
 			) +++
                         ( htmlMB generatedModuleMB $ \ generatedModule -> 
-                            {- maybe noHtml outputErrors errors +++ -}
                             p << ("Result Code" +++
                                 thespan ! [ identifier "hideShow"
                                           , thestyle "display:none"] << (
@@ -200,255 +448,20 @@ page (PageInfo {..}) =
 	    )	
 	)
        
-
+cdata :: String -> Html
 cdata s = primHtml $
     -- "<!--//--><![CDATA[//><!--\n" ++
     s
     -- ++"\n//--><!]]>"
 
+maindiv :: Html -> Html
 maindiv = thediv ! [theclass "main"]
-        
-examples =
-	[ ("init", unlines
-		[ "init []      = []"
-		, "init [a]     = []"
-		, "init (a:b:x) = a:initWork b x"
-		, ""
-		, "initWork a []    = []"
-		, "initWork a (b:x) = a:initWork b x"
-		])
-	, ("tail", unlines
-		[ "tail []     = []"
-		, "tail (x:xs) = xs"
-		])
-	, ("sieve", unlines
-		[ "sieve []      = []"
-		, "sieve [a]     = []"
-		, "sieve (a:b:x) = b:sieve x"
-		])
-	, ("halve", unlines
-		[ "halve []    = []"
-		, "halve (a:x) = a:halveWork x x"
-		, ""
-		, "halveWork xs    []      = []"
-		, "halveWork xs    [x]     = []"
-		, "halveWork (a:x) (b:c:y) = a:halveWork x y"
-		])
-	, ("rev", unlines
-		[ "reverse []     = []"
-		, "reverse (x:xs) = rev xs [x]"
-		, ""
-		, "rev []    y = y"
-		, "rev (a:x) y = rev x (a:y)"
-		])
-	]
 
-defaultCode = fromJust (lookup "init" examples)
-	
-outputErrors :: String -> Html
-outputErrors s = 
-           p << (
-                strong << "An error occurred:" +++ br +++
-                pre << s
-                )
-                
-mkSubmit active what = submit (submitId what) (submitLabel what)
-     	               ! if active then [] else [disabled]
+{-------------------------
+ - Static Web code
+ -------------------------}
 
-data Run = Get | Check | Load | BiDi | EvalPut | EvalGet
-
-
-submitId Get = "get source"
-submitId Check = "check"
-submitId Load = "load"
-submitId BiDi = "submitBiDi"
-submitId EvalPut = "evalPut"
-submitId EvalGet = "evalGet"
-
-submitCode Get   = Just ("get source")
-submitCode Check = Nothing
-submitCode Load  = Nothing
-
-submitLabel Check =   "Re-Parse definition"
-submitLabel Load  =   "Load example"
-submitLabel EvalGet = "view = get source"
-submitLabel EvalPut = "result = put source view"
-submitLabel BiDi =    "bidirectionalize"
-
-b18nModeName SemanticB18n = "Semantic bidir. (POPL’09)"
-b18nModeName SyntacticB18n = "Syntactic bidir. (ICFP’07)"
-b18nModeName CombinedB18n = "Combined bidir. (ICFP’10)"
-
-main = runCGI (handleErrors cgiMain)
-
--- This function will not work in all casses, but in most.
-delDefinition name code = unlines squashed
-  where filtered = filter (not . defines name) (lines code)
-	squash [] = []
-	squash ("":_) = [""]
-	squash ("\r":_) = [""]
-	squash ls = ls
-	squashed = concat $ map squash $ group $ filtered
-
-addDefiniton name def code = unlines (squashed ++ pad ++ new_line)
-  where	squashed = lines (delDefinition name code)
-	pad | last squashed == "" || last squashed == "\r" = []
-            | otherwise                                    = [""]
-	new_line = [name ++ " = " ++ def]
-	
-defines "" (' ':_) = True
-defines "" ('=':_) = True
-defines "" "" = False
-defines "" _   = False
-defines _  ""  = False
-defines (i:is) (x:xs) | i == x = defines is xs
-                      | i /= x = False
-
-cgiMain = do
-    qs <- queryString
-    if qs == "jquery"
-     then jQueryMain
-     else formMain
-
-jQueryMain = do
-        setHeader "Content-type" "text/javascript"
-        setHeader "Expires" "Fri, 01 Jan 2100 00:00:00 +0100"
-        setHeader "Cache-control" "max-age=36000000" -- 1000 h
-        outputFPS $ jQueryCode
-    
-defaultPlayCode (Config{ b18nMode = SyntacticB18n}) get =
-        Just $ unlines
-            [ "get s = Main." ++ get ++ " s"
-            , "put s v = " ++ get ++ "_B s v"
-            , ""
-            , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
-            ]
-defaultPlayCode (Config{ b18nMode = SemanticB18n}) get =
-        Just $ unlines
-            [ "get s = Main." ++ get ++ " s"
-            , "put s v = " ++ get ++ "_B s v"
-            , ""
-            , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
-            ]
-defaultPlayCode (Config{ b18nMode = CombinedB18n}) get =
-        Just $ unlines
-            [ "get s = Main." ++ get ++ " s"
-            , "put s v = fromMaybe (error \"Could not handle shape change.\") $ " ++
-                 get ++ "_Bbd bias default_value s v"
-            , "bias = rear         -- or another option, e.g., front, middle, borders"
-            , "default_value = 42  -- or another value of the element type of source"
-            , ""
-            , "source = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"
-            ]
-
-formMain = do
-        setHeader "Content-type" "text/html; charset=UTF-8"
-
-        conf <- do
-            b18nMode' <- maybe CombinedB18n read <$> getInput "b18nMode"
-            return $ adjustConfig $ defaultConfig
-                { isHaskellify = True
-                , b18nMode = b18nMode'
-                }
-	
-	todo <- msum <$> sequence (
-            map (\what -> fmap (const what) <$> getInput (submitId what))
-            [ BiDi, Get, Check, Load, EvalPut, EvalGet])
-        
-	code <- filter (/= '\r') <$> fromMaybe defaultCode <$> getInput "code"
-
-        code <- case todo of
-            Just Load -> do loadWhat <- getInput "loadCode"
-                            return $ fromMaybe code $ loadWhat >>= flip lookup examples 
-            _ -> return code
-        
-        let eAST = parseString code
-
-
-        let astError = either (Just . show) checkBidirectionalizability eAST
-
-        let (genCodeM,getM) = case (todo,eAST) of
-                (Just Load, _) -> (Nothing, Nothing)
-                (Just _, Right ast) ->
-                    (  Just $ render $ renderCode conf ast
-                    ,  firstDeclaredName ast
-                    )
-                _ -> (Nothing, Nothing)
-
-        showCode <- maybe False read <$> getInput "showCode"
-
-        pcM <- getInput "playCode" 
-        (playCode, playErrorM) <-
-            case (todo,getM,genCodeM,pcM) of
-            -- The user successfully generated code to play with, insert default playCode.
-            -- Do not use the user input, as he probably switched to a new example.
-            (Just BiDi, Just get, Just _, _) ->
-                return (defaultPlayCode conf get, Nothing)
-            -- The user played with the code
-            (Just EvalGet, Just get, Just genCode, Just pc) -> do
-                view <- liftIO $ evaluateWith genCode pc ("get source")
-                case view of 
-                    Left err -> return $ (Just pc, Just err)
-                    Right dat -> return $ (\r -> (Just r, Nothing))
-                                        $ addDefiniton "view" dat 
-                                        $ delDefinition "result"
-                                        $ pc
-            (Just EvalGet, Just get, Just genCode, Nothing) -> do
-                return (defaultPlayCode conf get, Nothing)
-            (Just EvalPut, Just get, Just genCode, Just pc) -> do
-                view <- liftIO $ evaluateWith genCode pc ("put source view")
-                case view of 
-                    Left err -> return $ (Just pc, Just err)
-                    Right dat -> return $ (\r -> (Just r, Nothing))
-                                        $ addDefiniton "result" dat 
-                                        $ pc
-            (Just EvalPut, Just get, Just _, Nothing) -> do
-                return (defaultPlayCode conf get, Nothing)
-            _ -> return (Nothing, Nothing)
-
-        scrollX <- getInput "scrollx"
-        scrollY <- getInput "scrolly"
-
-        outputFPS $ fromString $ showHtml $ page $
-            PageInfo conf
-                     scrollX
-                     scrollY
-                     code
-                     astError
-                     genCodeM
-                     showCode
-                     playCode
-                     playErrorM
-
-evaluateWith :: String -> String -> String -> IO (Either String String)
-evaluateWith genCode playCode expr =
-    withinTmpDir $ do
-        BS.writeFile "BUtil.hs" bUtilCode
-        writeFile "Main.hs" $ "module Main where\n" ++ genCode
-        liftIO $ catchInterpreterErrors $ simpleInterpret mods imports playCode expr
-  where mods = 
-            [ "BUtil"
-            , "Main"
-            --, "Data.Maybe"
-            ]
-        imports = mods ++
-            [ "Data.Maybe"
-            , "Prelude"
-            ]
-
-withFullSource genCode playCode = genCode' ++ "\n" ++ playCode
-    where genCode' = unlines . filter (not . isPrefixOf "import") . lines $ genCode
-
-astInfo (Left err) = maindiv << p << (
-	"Can not parse your definition:" +++ br +++
-	pre << show err +++ br +++
-	mkSubmit True Check)
-
-astInfo (Right source) = maindiv << (
-	p << ("Definition parsed succesfully") +++
-	p << mkSubmit True Check
-	)
-
+cssStyle :: String
 cssStyle = unlines 
         [ "body { padding:0px; margin: 0px; }"
         , "div.top { margin:0px; padding:10px; margin-bottom:20px;"
@@ -469,6 +482,7 @@ cssStyle = unlines
         , "p { text-align:justify; }"
 	]
 
+jsCode :: String
 jsCode = unlines 
     [ "function saveScroll () {"
     , "    $('#scrolly').val($('html').scrollTop());"
@@ -489,12 +503,15 @@ jsCode = unlines
     , "})"
     ]
 
-htmlMB Nothing  f = noHtml
+{-------------------------
+ - Utility functions
+ -------------------------}
+
+htmlMB :: Maybe t -> (t -> Html) -> Html
+htmlMB Nothing  _ = noHtml
 htmlMB (Just x) f = f x
 
-readOnly = emptyAttr "readonly"
-
-
+firstDeclaredName :: AST -> Maybe String
 firstDeclaredName (AST []) = Nothing
 firstDeclaredName (AST (Decl n _ _ _:_)) = Just (show n)
 
