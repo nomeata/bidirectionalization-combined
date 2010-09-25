@@ -194,7 +194,7 @@ page (PageInfo {..}) =
                 hotlink "http://www-ps.iai.uni-bonn.de/cgi-bin/bff.cgi" << 
                     "the demo interface from “Bidirectionalization for free!”"
             ) +++
-	    p << ("© 2010 Joachim Breitner <" +++
+	    p << ("© 2010 Kazutaka Matsuda, Joachim Breitner <" +++
                 hotlink "mailto:mail@joachim-breitner.de" << "mail@joachim-breitner.de" +++
 	      ">")
 	    )	
